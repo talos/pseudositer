@@ -4,7 +4,7 @@
 
 - - -
 
-## what it is
+### what it is
 
 Pseudositer is a jQuery plugin that dynamically populates a single page with content from AJAX requests for index pages. This means you can turn a hierarchy of text, image, and other files into a functional site navigated within one HTML file and without a line of special server-side code.
 
@@ -15,7 +15,7 @@ While directories are erased and reloaded during navigation, content is only loa
 
 - - -
 
-## getting started
+### getting started
 
 Getting started with Pseudositer is easy. Make sure to include
 
@@ -36,7 +36,7 @@ Within the page itself, you now must specify the location of the content. This i
 
 - - -
 
-## pros & cons
+### pros & cons
 
 Generating your website through pseudositer isn't all roses. There are some definite disadvantages to the system, and some definite advantages...
 
