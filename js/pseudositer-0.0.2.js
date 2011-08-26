@@ -36,12 +36,15 @@ if (!window.console) {
 			    '.jpg'  : methods['loadImage'],
 			    '.jpeg' : methods['loadImage'],
 			    '.gif'  : methods['loadImage'],
-			    '.png'  : methods['loadImage']
+			    '.png'  : methods['loadImage'],
+			    '.md'   : methods['loadMarkdown']
 			},
 			defaultLoad    : methods['loadLink'],
-			linkSelector   : 'a:not([href^=?],[href^=/])', // Find links from a directory listing that go deeper
+			// Find links from a directory listing that go deeper
+			linkSelector   : 'a:not([href^=?],[href^=/])',
 			nonAlphanumeric: /[^a-z0-9]/gi,
-			extensionsRegex: /\.[^.]*[^\/]$/, // todo move this stuff to globals area
+			// todo move this stuff to globals area
+			extensionsRegex: /\.[^.]*[^\/]$/,
 			preprocessName : function(name) {
 			    return decodeURIComponent(name).replace(/^[_|]*/, '').replace(/\.[^.]*[^\/]$/, '');  // _ sorts to front, | sorts to back
 			}
@@ -180,11 +183,14 @@ if (!window.console) {
 		});
 	},
 	'loadImage': function(options, callback) {
-	    console.log('loadImage');
 	    return this.append($('<a>').attr('href', options.hiddenUrl + options.visibleUrl).append($('<img>').attr('src', options.hiddenUrl + options.visibleUrl))).trigger('show.pseudositer');
 	},
 	'loadLink' : function(options, callback) {
 	    return this.append($('<a>').attr('href', options.hiddenUrl + options.visibleUrl).append(decodeURIComponent(options.visibleUrl))).trigger('show.pseudositer');
+	},
+	'loadMarkdown' : function(options, callback) {
+            //this.bind('change.markdown', function() { this.trigger('show.pseudositer'); });
+	    return this.markdown(options.hiddenUrl + options.visibleUrl).trigger('show.pseudositer');
 	},
 	'activateDefaultLink' : function() {
 	    return this.each(function() {
