@@ -1,0 +1,5 @@
+all:
+	coffee -o src/js -c src/coffee/*.coffee
+
+clean:
+	rm -f src/js/*.js
