@@ -25,8 +25,20 @@ describe('pseudositer', function() {
 		
 		describe('when the content is finished loading', function() {
 			
+			beforeEach(function() {
+				runs(function() {
+					History.replaceState(null, null, '/hello world');
+				});
+
+				waitsFor(function() {
+					return function() {
+						$('pseudositer-content').text() === "Hello World!";
+					};
+				}, 'Never loaded "/hello world" content.', 2000);
+			});
+
 			it('should remove the loading notice', function() {
-				throw 'not yet implemented';
+				expect($('#pseudositer-loading')).not.toBeVisible();
 			});
 			
 			it('should transition in the content', function() {
@@ -40,10 +52,9 @@ describe('pseudositer', function() {
 				History.replaceState(null, null, '/');
 			});
 
-			it('should display the index of the root content directory', function() {
-				throw 'not yet implemented';
+			it('should replace the state with that of the deepest earliest alphabetized content', function() {
+				expect(document.location.pathname).toEqual('/directory/first.txt');
 			});
-
 		});
 
 		describe('if there is a non-root state', function() {
@@ -54,13 +65,35 @@ describe('pseudositer', function() {
 					History.replaceState(null, null, '/directory/');
 				});
 				
-				it('should load the directory listing', function() {
-					throw 'not yet implemented';
+				it('should display the links of that directory', function() {
+					expect($('#pseudositer')).toContain('a[href="/directory/nested"]');
+					expect($('#pseudositer')).toContain('a[href="/directory/first"]');
+				});
+				
+				it('should replace the state with that of the deepest earliest alphabetized content', function() {
+					expect(document.location.pathname).toEqual('/directory/first');
+				});
+
+				it('should load the deepest earliest alphabetized content in that directory', function() {
+					expect($('#pseudositer-content')).toHaveText('first blood');
 				});
 			});
 			
 			describe('if the state is a file', function() {
-
+				
+				beforeEach(function() {
+					History.replaceState(null, null, '/hello world.txt');
+				});
+				
+				it('should not display the link to the file', function() {
+					expect($('#pseudositer')).not.toContain('a[href="/hello world"]');
+				});
+				
+				it('should display all the links in directories containing that file', function() {
+					expect($('#pseudositer')).toContain('a[href="/directory/"]');
+					expect($('#pseudositer')).toContain('a[href="/tree"]');
+				});
+				
 				describe('including the file type', function() {
 					
 					beforeEach(function() {
@@ -68,7 +101,7 @@ describe('pseudositer', function() {
 					});
 					
 					it('should strip the file type from the state', function() {
-						expect(location.pathname + location.hash).toEqual('/hello world');
+						expect(document.location.pathname).toEqual('/hello world');
 					});
 				});
 				
@@ -79,9 +112,7 @@ describe('pseudositer', function() {
 					});
 
 					it('should leave the state alone', function() {
-						throw 'not yet implemented';
-
-						expect(location.pathname + location.hash).toEqual('/hello world');
+						expect(document.location.pathname).toEqual('/hello world');
 					});
 				});
 
@@ -91,8 +122,8 @@ describe('pseudositer', function() {
 						History.replaceState(null, null, '/hello world');
 					});
 
-					it('should load the text file', function() {
-						throw 'not yet implemented';
+					it('should load the text file content', function() {
+						expect($('#pseudositer-content')).toHaveText('Hello World!'));
 					});
 					
 				});
@@ -104,7 +135,8 @@ describe('pseudositer', function() {
 					});
 					
 					it('should load the image', function() {
-						throw 'not yet implemented';
+						expect($('#pseudositer-content')).toHave('img');
+						expect($('#pseudositer-content img')).toHaveAttr('src', '/simple/tree.png');
 					});
 				});
 			});
@@ -119,18 +151,35 @@ describe('pseudositer', function() {
 
 				});
 				
-				it('should display a 404 page', function() {
-					throw 'not yet implemented';
+				it('should display a "content not found" notice', function() {
+					expect($('#pseudositer-content')).toHaveText('not found');
 				});
 
 				it('should not modify the state', function() {
-					expect(location.pathname + location.hash).toEqual(garbage);
+					expect(document.location.pathname).toEqual(garbage);
 				});
 			});
 					
 		});
 		
 		describe('if there was previously content on the page', function() {
+
+			beforeEach(function() {
+				runs(function() {
+					History.replaceState(null, null, '/hello world');
+				});
+				
+				waitsFor(function() {
+					return function() {
+						$('pseudositer-content').text() === "Hello World!";
+					};
+				}, 'Never loaded "/hello world" content.', 2000);
+
+				runs(function() {
+					History.replaceState(null, null, '/directory/first');
+				});
+			});
+
 			it('should transition out the existing content', function() {
 				throw 'not yet implemented';
 			});
