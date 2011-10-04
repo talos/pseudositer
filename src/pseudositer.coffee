@@ -177,6 +177,8 @@ and the paths to your javascript libraries as appropriate:
 
     # Initialization code
     @init = () =>
+      log "init with #{rootPath}"
+
       @options = $.extend {}, $.pseudositer.defaultOptions, options
 
       # Assign the root, ensure that it ends in '/'
@@ -206,15 +208,15 @@ and the paths to your javascript libraries as appropriate:
         @$content = $ @options.contentClass
 
       # Remember event callback so we can unbind it later
-      @eventCallback = () -> update()
+      # @eventCallback = () -> update()
         # log "fresh getstate: #{History.getState()}"
         # update History.getState()
 
       # Bind state change to callback
-      History.Adapter.bind window, 'statechange', @eventCallback
+      History.Adapter.bind window, 'statechange', update
 
       # Immediately update view
-      update()
+      History.replaceState null, null, @rootPath
 
       # return this
       this
@@ -282,17 +284,17 @@ and the paths to your javascript libraries as appropriate:
       @$loading.hide 'fast', -> dfd.resolve()
       dfd.promise()
 
-    # Update browser to display the view associated with a state.
+    # Update browser to display the view associated with the current state.
     # Will check the cache to see if this state has been loaded before.
     #
-    # @param state the State object to use when updating the view.
-    #
     # @return this
-    update = ( state = History.getState() ) =>
+    update = ( ) =>
+      state = History.getState()
+
       log "state url: #{state.url}"
       log "fresh url: #{History.getState().url}"
 
-      History.replaceState( state )
+      # History.replaceState( state )
 
       # if we've visited the state before and grabbed data, reuse that object
       if @cachedStates[ state.url ]?
@@ -306,16 +308,14 @@ and the paths to your javascript libraries as appropriate:
       # if we already have content data for state, use it
       if state.data.pseudositer?
         showIndices state.url
-
         showContent state.data.pseudositer.$content
 
       else # load the data for the state
         showLoading()
 
-        # call back update after the state is loaded
-        # successfully
+        # update with the new state and hide loading
         $.when( load( state ) )
-          .done( (newState) -> update newState )
+          .done( (newState) -> History.replaceState newState ) # this will call #update again
           .fail( (errObj)   -> log errObj ) # TODO error handling
           .always(          =>
             hideLoading()
