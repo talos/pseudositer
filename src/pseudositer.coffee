@@ -80,43 +80,24 @@ and the paths to your javascript libraries as appropriate:
       $.get pathToText, ( responseText ) =>
         dfd.resolve $( 'div' ).text responseText
 
-  # Get the current path without the filename
+  # Get the path of the currently displayed location
   #
-  # @return {String} the currently displayed path, without the
-  # file name
-  getPathWithoutFilename = ->
-    path = location.pathname
+  # @return {String} the currently displayed path, without fragment
+  getCurrentPath = ->
+    path = document.location.pathname
 
-    # if there's a file at the end, lop it off.
-    if getSuffix( path )?
-      ary = path.split '/'
-      ary[ 0...ary.length - 1 ].join( '/' ) + '/'
-    else
-      path
-
-  # Obtain the path component of an absolute URL.  For example:
+  # Get the fragment of the currently displayed location
   #
-  # getPathArray( "http://www.site.com/path/to/my/file.txt" ) ->
-  #  [ "path", "to", "my", "file.txt" ]
-  #
-  # @param url an absolute URL
-  #
-  # @return {Array} the path component of the absolute URL, split
-  # by '/'
-  getPathArray = ( url ) ->
-    split = url
-      .split( '#' )[0]
-      .split( '/' )
-    split[ 3...split.length ]
+  # @return {String} the currently displayed fragment, without the
+  # leading '#'
+  getCurrentFragment = ->
+    fragment = document.location.hash.substr 1
 
   # Obtain the paths leading up to and including the path of the provided
-  # url.  For example:
+  # path.  For example:
   #
-  # getTrails( "http://www.site.com/path/to/my/file.txt" ) ->
+  # getTrails( "/path/to/my/file.txt" ) ->
   #  ["/", "/path/to/", "/path/to/my/", "/path/to/my/file.txt"]
-  #
-  # getTrails( "http://www.site.com/path/to/my/#fragment" ) ->
-  #  ["/", "/path/to/", "/path/to/my/", "/path/to/my/"]
   #
   # if the last element of the returned array does not end with a '/', then
   # this path does not refer to a file.
@@ -125,8 +106,10 @@ and the paths to your javascript libraries as appropriate:
   #
   # @return {Array} An array of paths, starting with the most interior
   # path.
-  getTrails = ( url ) ->
-    ary = getPathArray url
+  getTrails = ( path ) ->
+
+    log path
+    ary = path.split '/'
 
     # the first path is always a '/'
     trail = ['/']
@@ -140,6 +123,22 @@ and the paths to your javascript libraries as appropriate:
       trail.push '/' + ary.join '/'
 
     trail
+
+  # Obtain the fragment portion of a URL, or null if there is none
+  #
+  # For example:
+  #   getFragmentFromUrl(/path/without/fragment)     =>  null
+  #   getFragmentFromUrl(/path/with/fragment/#)      =>  ""
+  #   getFragmentFromUrl(/path/with/fragment/##)     =>  "#"
+  #   getFragmentFromUrl(/path/with/fragment/#word)  =>  "word"
+  #
+  # @param url the url
+  #
+  # @return {String} the fragment, or null if there is none
+  getFragmentFromUrl = ( url ) ->
+
+    loc = url.indexOf( '#' )
+    if loc > -1 then url.substr( loc + 1 ) else null
 
   # Obtain the lowercase file type suffix (after a period)
   #
@@ -160,11 +159,14 @@ and the paths to your javascript libraries as appropriate:
   ###
   # Plugin code
   ###
-  $.pseudositer = (el, rootPath, options) ->
+  $.pseudositer = (el, hiddenPath, options) ->
 
     # Access to jQuery and DOM versions of element
     @el = el
     @$el = $ el
+
+    # TODO better method of unbinding events
+    @destroyed = false
 
     # Add a reverse reference to the DOM object
     @$el.data "pseudositer", @
@@ -179,31 +181,46 @@ and the paths to your javascript libraries as appropriate:
     @init = () =>
       @options = $.extend {}, $.pseudositer.defaultOptions, options
 
-      # Assign the root, ensure that it ends in '/'
-      rootPath = if rootPath.charAt( rootPath.length - 1 ) is '/' then rootPath else "#{rootPath}/"
-      if rootPath.charAt( 0 ) is '/'
-        @rootPath = rootPath # absolute
+      @visiblePath = getCurrentPath()
+
+      # Ensure the hidden path ends in '/'
+      hiddenPath = if hiddenPath.charAt( hiddenPath.length - 1 ) is '/' then hiddenPath else "#{hiddenPath}/"
+
+      # Assign real path
+      if hiddenPath.charAt( 0 ) is '/'
+        @realPath = hiddenPath
       else
-        @rootPath = getPathWithoutFilename() + rootPath # relative
+        # eliminate current file name when constructing real path
+        if getSuffix( @visiblePath )?
+          split = @visiblePath.split( '/' )
+          @realPath = split[ 0...split.length - 1 ].join( '/' ) + '/' + hiddenPath
+        else # make sure that relative hidden path is joined without a redundant slash to visible path
+          if @visiblePath.charAt( @visiblePath.length - 1 ) is '/'
+            @realPath = @visiblePath + hiddenPath
+          else
+            @realPath = @visiblePath + '/' + hiddenPath
 
       # Create loading div if one doesn't already exist,
       # and keep reference to the div.
-      if $( @options.loadingClass ).length is 0
+      if $( '.' + @options.loadingClass ).length is 0
         @$loading = $( '<div>' ).addClass @options.loadingClass
         @$el.append( @$loading )
       else
         @$loading = $ @options.loadingClass
+
+      # Hide loading by default
+      hideLoading()
 
       # Initially loading div is hidden
       @$loading.hide()
 
       # Create content div if one doesn't already exist,
       # and keep reference to the div.
-      if $(@options.contentClass).length is 0
-        @$content = $('<div>').addClass @options.contentClass
+      if $( '.' + @options.contentClass ).length is 0
+        @$content = $( '<div>' ).addClass @options.contentClass
         @$el.append @$content
       else
-        @$content = $ @options.contentClass
+        @$content = $( '.' + @options.contentClass )
 
       # Remember event callback so we can unbind it later
       # @eventCallback = () -> update()
@@ -211,10 +228,11 @@ and the paths to your javascript libraries as appropriate:
         # update History.getState()
 
       # Bind state change to callback
-      History.Adapter.bind window, 'statechange', update
+      History.Adapter.bind window, 'statechange', =>
+        update() if @destroyed is false
 
       # Immediately update view
-      History.replaceState null, null, @rootPath
+      update()
 
       # return this
       this
@@ -227,6 +245,10 @@ and the paths to your javascript libraries as appropriate:
     #
     # @return this
     @destroy = =>
+
+      # TODO better method of ignoring events
+      @destroyed = true
+
       # Empty out the original element.
       @$el.empty()
 
@@ -237,8 +259,8 @@ and the paths to your javascript libraries as appropriate:
       # TODO specifically unbind our callback -- the callback is
       # wrapped in another function by History.Adapter, so this is
       # complicated.
-      #$( window ).unbind 'hashchange'
-      #$( window ).unbind 'popstate'
+      # @$el.unbind 'hashchange'
+      # @$el.unbind 'popstate'
 
       this
 
@@ -255,16 +277,19 @@ and the paths to your javascript libraries as appropriate:
 
       @options.indexClass + '-' + level
 
-    # Construct the absolute path for an ajax request from a path from
-    # the address bar.  Resolves the path against @rootPath.
+    # Construct the absolute path for an ajax request from a fragment.
+    # Resolves the fragment against the real path
     #
-    # @param path a path from the address bar
+    # For example:
+    # getAjaxPath( "/path/to/file.txt" ) ->
+    #   "something/else/hidden/path/to/file.txt"
+    #
+    # @param fragment a fragment
     #
     # @return {String} a path that can be used for an ajax request.
-    getAbsPath = (path) =>
-
-      # @rootPath always ends in '/'
-      if path.charAt( 0 ) is '/' then @rootPath + path.substr 1 else @rootPath + path
+    getAjaxPath = ( fragment ) =>
+      # fragment should start with '/'
+      @realPath + fragment.substr 1
 
     # Show the loading notice
     #
@@ -287,75 +312,81 @@ and the paths to your javascript libraries as appropriate:
     #
     # @return this
     update = ( ) =>
-      log "updating"
       state = History.getState()
 
-      # History.replaceState( state )
+      fragmentPath = getFragmentFromUrl state.url
+
+      # nonexistent fragmentPath is "/"
+      fragmentPath = '/' if fragmentPath is null or fragmentPath is ''
+      log "fragmentPath : #{fragmentPath}"
 
       # if we've visited the state before and grabbed data, reuse that object
-      if @cachedStates[ state.url ]?
-        state = @cachedStates[ state.url ]
+      if @cachedStates[ fragmentPath ]?
+        state = @cachedStates[ fragmentPath ]
 
       # store state in cache if it has pseudositer data.
       else
         if state.data.pseudositer?
-          @cachedStates[ state.url ] = state
+          @cachedStates[ fragmentPath ] = state
 
       # if we already have content data for state, use it
       if state.data.pseudositer?
+        log "state.data:"
+        log state.data
 
-        showIndices state.url
+        showIndices fragmentPath
         showContent state.data.pseudositer.$content
 
       else # load the data for the state
         showLoading()
 
         dfd = new $.Deferred()
-        log "loading"
 
-        # resolve deferred from loading state
-        $.when( load state )
+        # resolve deferred when we have a new state
+        $.when( load fragmentPath )
           .done( (newState) -> dfd.resolve newState )
           .fail( (errObj)   -> dfd.reject  errObj ) # TODO error handling
 
         # reject deferred on timeout
         setTimeout ( => dfd.reject "Timeout after #{@options.timeout} ms" ), @options.timeout
 
+        # handle possible deferred completions
         $.when( dfd )
           .done( (newState) -> History.replaceState newState ) # this will call #update again
           .fail( (errObj) -> log errObj )
           .always( =>
             hideLoading()
-            log "should have triggered #{@options.alwaysEvent} on #{@$el.attr('id')}"
             @$el.triggerHandler @options.alwaysEvent
           )
 
       this
 
     # Obtain a {Promise} object that, once done, has loaded and cached
-    # (into @pathIndices) all the paths leading to the supplied state's content,
-    # and also loads the content into that state.
+    # (into @pathIndices) all the paths leading to the supplied path's content,
+    # and also loads the content into a new state.
     #
-    # @param state the {State} to load
+    # @param path the path to load
     #
-    # @return {Promise} object that, when finished, means that
+    # @return {Promise} object that, when done, means that
     # data has been loaded into cache and state.  Callbacks receive
     # the new {State} as an argument.
-    load = ( state ) =>
+    load = ( path ) =>
 
-      dfd = new $.Deferred()
-      url = state.url
+      # Make sure that any pre-specified trails are in our cache.
+      trails = getTrails path
 
-      trails = getTrails url
-
+      trailsToLoad = []
       # pipe an additional request for any trails that are not in the cache
       for level in [ 0...trails.length ]
 
         trail = trails[ level ]
         unless @pathIndices[ trail ]?
-          dfd = dfd.pipe loadIndex trail
+          trailsToLoad.push loadIndex( trail )
 
-      path = trails[ trails.length - 1 ]
+      trailsLoaded = $.when( trailsToLoad )
+
+      # Make sure that our path leads to content.
+      unfolded = $.Deferred()
 
       # unfold the path to content.  once the path is unfolded,
       # load the content.  once the content is loaded, resolve
@@ -363,8 +394,8 @@ and the paths to your javascript libraries as appropriate:
       # and unfolded path.
       log "pre-unfolded path: #{path}"
       $.when( unfold( path ) ).done ( unfoldedPath ) ->
-        log "unfolded path: #{unfoldedPath}"
 
+        log "unfolded path: #{unfoldedPath}"
         loadContent( unfoldedPath )
           .done ( $content ) ->
             newState = History.createStateObject
@@ -372,12 +403,11 @@ and the paths to your javascript libraries as appropriate:
                 $content  : $content,
               null,
               unfoldedPath
-            log "newState #{newState}"
-            dfd.resolve newState
+            unfolded.resolve newState
           .fail ( failObj ) ->
-            dfd.reject failObj
+            unfolded.reject failObj
 
-      dfd.promise()
+      $.when( unfolded, trailsLoaded )
 
     # Asynchronously determine the nearest content to this path,
     # loading indices into cache all along the way.
@@ -390,20 +420,25 @@ and the paths to your javascript libraries as appropriate:
     # that is the unfolded path
     unfold = ( path, dfd = new $.Deferred() ) =>
 
-      # if path already points to content, resolve the deferred
-      if getSuffix( path ) isnt null
+      # eliminate '#' if it slipped in at front
+      path = path.substr 1 if path.charAt( 0 ) is '#'
 
+      # if path already points to content, resolve the deferred
+      if getSuffix( path )?
         dfd.resolve path
       else
 
         # when the index is loaded, call unfold again using the first
         # link and reusing the deferred object
-        $.when( loadIndex( path ) ).done ( $links ) =>
-          log "$links: #{$links.toString()}"
-          if $links.length is 0 # empty index page
-            dfd.reject "#{path} has no content"
-          else
-            unfold $links.first().attr( 'href' ), dfd
+        $.when( loadIndex( path ) )
+          .done ( $links ) =>
+            if $links.length is 0 # empty index page
+              dfd.reject "#{path} has no content"
+            else
+              log "unfold #{$links.first().attr( 'href' )}"
+              unfold $links.first().attr( 'href' ), dfd
+          .fail ( failObj ) ->
+            dfd.reject failObj
 
       dfd.promise()
 
@@ -411,19 +446,37 @@ and the paths to your javascript libraries as appropriate:
     # make an ajax request for a path to the index page, and cache
     # all the links on that index page into @pathIndices.
     #
-    # @param path the path to an index page
+    # @param indexPath the path to an index page
     #
     # @return {Promise} which will resolve with an
     # argument that is an array of all the links in that index
-    loadIndex = ( path ) =>
+    loadIndex = ( indexPath ) =>
       dfd = new $.Deferred()
-      if @pathIndices[ path ]?
-        dfd.resolve @pathIndices[ path ]
+
+      # if the index is cached, use the links stored there and resolve
+      # immediately
+      if @pathIndices[ indexPath ]?
+        dfd.resolve @pathIndices[ indexPath ]
+
+      # otherwise, load the index and resolve once that's done
       else
-        $.when $.get getAbsPath path, ( responseText ) =>
-          @pathIndices[ path ] = $( data ).find options.linkSelector
-          dfd.resolve( @pathIndices [ path ] )
-      dfd
+        $.get getAjaxPath( indexPath ), ( responseText ) =>
+
+          # hashify href tags
+          $links = $( responseText )
+            .find( @options.linkSelector )
+            .attr 'href', ( idx, oldValue ) ->
+              # use old value as hash if absolute, resolve against index path otherwise
+              '#' + if oldValue.charAt( 0 ) is '/' then oldValue else indexPath + oldValue
+
+          log $links
+          @pathIndices[ indexPath ] = $links
+        .done =>
+          dfd.resolve( @pathIndices[ indexPath ] )
+        .fail ->
+          dfd.reject( "Could not load index page for #{indexPath}" )
+
+      dfd.promise()
 
     # Load the content located at a path
     #
@@ -434,25 +487,24 @@ and the paths to your javascript libraries as appropriate:
     # for the file suffix.
     loadContent = ( pathToContent ) =>
       suffix = getSuffix pathToContent
+      log "suffix #{suffix}"
 
       # use the handler in @options.map
       if @options.map[ suffix ]?
-        log "firing handler #{@options.map[ suffix ]}"
-        @options.map[ suffix ] getAbsPath pathToContent
+        @options.map[ suffix ] getAjaxPath pathToContent
       else # log an error if there's no handler
-        log "No handler for file suffix #{suffix}."
         dfd = new $.Deferred().reject().promise()
 
-    # Show the index for an unfolded url, in addition to all its parent
+    # Show the index for an unfolded path, in addition to all its parent
     # index pages. This data should already have been loaded into
     # @pathIndices .
     #
-    # @param url the URL to show links for
+    # @param path the path to show links for
     #
     # @return this
-    showIndices = ( url ) =>
+    showIndices = ( path ) =>
 
-      trails = getTrails url
+      trails = getTrails path
 
       # mark all link elements as stale before we iterate through the
       # path
@@ -465,6 +517,7 @@ and the paths to your javascript libraries as appropriate:
         # If a class for the level is not on the page, create it
         levelClass = getIndexClassForLevel level
         $index = $( '.' + levelClass )
+        log "#{levelClass}: levelClass"
         if $index.length is 0
           $index = $( 'div' )
             .addClass @options.indexClass + ' ' + levelClass
@@ -493,6 +546,8 @@ and the paths to your javascript libraries as appropriate:
     #
     # @return this
     showContent = ( $content ) =>
+      log "showContent"
+      log @$content
       $( @$content ).empty()
         .append( $content );
       this
@@ -508,7 +563,7 @@ and the paths to your javascript libraries as appropriate:
     indexClass     : 'pseudositer-index'
     linkSelector   : 'a:not([href^="?"],[href^="/"])' # Find links from an index page that go deeper
     alwaysEvent    : 'pseudositer-always'
-    timeout        : 500
+    timeout        : 1000
     map :
       png : loadImage
       gif : loadImage
@@ -517,7 +572,7 @@ and the paths to your javascript libraries as appropriate:
       txt : loadText
       html: loadText
 
-  $.fn.pseudositer = (rootPath, options) ->
+  $.fn.pseudositer = (hiddenPath, options) ->
     $.each @, (i, el) ->
       $el = ($ el)
 
@@ -527,6 +582,6 @@ and the paths to your javascript libraries as appropriate:
         # the instance can always be retrieved as element.data 'pseudositer'
         # You can do things like:
         # (element.data 'pseudositer').publicMethod1();
-        $el.data 'pseudositer', new $.pseudositer el, rootPath, options
+        $el.data 'pseudositer', new $.pseudositer el, hiddenPath, options
   undefined
 )(jQuery)

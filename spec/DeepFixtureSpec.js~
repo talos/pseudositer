@@ -1,0 +1,22 @@
+describe('pseudositer', function() {
+	/**
+	 * Load fixtures.
+	 **/
+	beforeEach(function() {
+		runs(function() {
+			loadFixtures('simple.html');
+			$elem = $('#pseudositer-simple').pseudositer( 'fixtures/simple/' );
+		});
+	});
+
+	afterEach(function() {
+		runs(function() {
+			$elem.data('pseudositer').destroy();
+		});
+	});
+	
+	it('should delve to deepest level', function() {
+		expect(document.location.pathname).toEqual
+	});
+
+});

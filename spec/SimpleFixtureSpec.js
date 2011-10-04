@@ -1,68 +1,32 @@
 describe('pseudositer', function() {
 
-	var $elem,
-
 	/**
-	 * Save our original state at initialization.
-	 */
-	originalPath = document.location.pathname,
-	path;
-
-    /**
-     * Load fixtures.
-     **/
+	 * Load fixtures.
+	 **/
 	beforeEach(function() {
-		/**
-		 * Restore original state before each test.
-		 */
-		// runs(function() {
-		// 	if( $('#pseudositer-simple').length > 0) {
-		// 		if( $elem.data('pseudositer') !== undefined ) {
-		// 			$elem.data('pseudositer').destroy();
-		// 		}
-		// 	}
-			
-		// 	setAddress( originalPath );
-		// });
-		
 		runs(function() {
-			History.replaceState( null, null, originalPath );
-		});
-		
-		waitsFor(function() {
-			return document.location.pathname === originalPath;
-		}, 1000, "Should have reset address to " + originalPath);
-		
-		runs(function() {
-			console.log("about to load fixtures");
-			loadFixtures('simple.html');
-			$elem = $('#pseudositer-simple').pseudositer( 'simple/' );
+			// simulate having the hashpath there before the page loads
+			if( getPreloadPath() !== null ) {
+				History.replaceState( null, null, getPreloadPath() );
+			}
+
+			setFixtures( $( '<div />' ).attr( 'id', 'pseudositer' ) );
+			$elem = $('#pseudositer').pseudositer( 'fixtures/simple/' );
 		});
 	});
 
 	afterEach(function() {
 		runs(function() {
-			console.log("about to destroy pseudositer: " + $elem);
-			
 			$elem.data('pseudositer').destroy();
-			History.replaceState( null, null, originalPath );
 		});
 	});
-
-	/*
-    // not currently sure how to write this spec.
-    describe('if the page is loaded for the first time', function() {
-		it('should initialize pseudositer', function() {
-			throw 'not yet implemented';
-		});
-    });
-    */
 	
     describe('when the page is reloaded', function() {
 
 		it('should throw up a loading notice', function() {
-			
-			expect($('#pseudositer-load')).toBeVisible();
+			runs(function() {
+				expect($('.pseudositer-load')).toBeVisible();
+			});
 		});
 		
 		describe('when the content is finished loading', function() {
@@ -70,7 +34,7 @@ describe('pseudositer', function() {
 			it('should remove the loading notice', function() {
 				waitForPseudositer( $elem );
 				runs(function() {
-					expect($('#pseudositer-load')).not.toBeVisible();
+					expect($('.pseudositer-load')).not.toBeVisible();
 				});
 			});
 			
@@ -82,9 +46,9 @@ describe('pseudositer', function() {
 		describe('if state is root', function() {
 
 			it('should replace the state with that of the deepest earliest alphabetized content', function() {
-				waitForPseudositer( $('pseudositer-simple') );
+				waitForPseudositer( $elem );
 				runs(function() {
-					expect(document.location.pathname).toEqual('/directory/first.txt');
+					expect(document.location.hash).toEqual('#/directory/first.txt');
 				});
 			});
 		});
@@ -94,28 +58,28 @@ describe('pseudositer', function() {
 			describe('if the state is a directory', function() {
 
 				beforeEach(function() {
-					path = 'directory/';
+					setPath('#/directory/');
 				});
 				
 				it('should display the links of that directory', function() {
 					waitForPseudositer( $elem );
 					runs(function() {
-						expect($('#pseudositer')).toContain('a[href="/directory/nested"]');
-						expect($('#pseudositer')).toContain('a[href="/directory/first"]');
+						expect($elem).toContain('a[href="#/directory/nested"]');
+						expect($elem).toContain('a[href="#/directory/first"]');
 					});
 				});
 				
 				it('should replace the state with that of the deepest earliest alphabetized content', function() {
 					waitForPseudositer( $elem );
 					runs(function() {
-						expect(document.location.pathname).toEqual('/directory/first');
+						expect(document.location.hash).toEqual('#/directory/first');
 					});
 				});
 
 				it('should load the deepest earliest alphabetized content in that directory', function() {
 					waitForPseudositer( $elem );
 					runs(function() {
-						expect($('#pseudositer-content')).toHaveText('first blood');
+						expect($('.pseudositer-content')).toHaveText('first blood');
 					});
 				});
 			});
@@ -123,21 +87,21 @@ describe('pseudositer', function() {
 			describe('if the state is a file', function() {
 				
 				beforeEach(function() {
-					path = 'hello world.txt';
+					setPath( '#/hello world.txt' );
 				});
 				
 				it('should not display the link to the file', function() {
 					waitForPseudositer( $elem );
 					runs(function() {
-						expect($('#pseudositer')).not.toContain('a[href="/hello world"]');
+						expect($elem).not.toContain('a[href="#/hello world"]');
 					});
 				});
 				
 				it('should display all the links in directories containing that file', function() {
 					waitForPseudositer( $elem );
 					runs(function() {
-						expect($('#pseudositer')).toContain('a[href="/directory/"]');
-						expect($('#pseudositer')).toContain('a[href="/tree"]');
+						expect($elem).toContain('a[href="#/directory/"]');
+						expect($elem).toContain('a[href="#/tree"]');
 					});
 				});
 				
@@ -146,7 +110,7 @@ describe('pseudositer', function() {
 					it('should strip the file type from the state', function() {
 						waitForPseudositer( $elem );
 						runs(function() {
-							expect(document.location.pathname).toEqual('/hello world');
+							expect(document.location.hash).toEqual('#/hello world');
 						});
 					});
 				});
@@ -154,13 +118,13 @@ describe('pseudositer', function() {
 				describe('not including the file type', function() {
 					
 					beforeEach(function() {
-						path = 'hello world';
+						setPath('#/hello world');
 					});
 
 					it('should leave the state alone', function() {
 						waitForPseudositer( $elem );
 						runs(function() {
-							expect(document.location.pathname).toEqual('/hello world');
+							expect(document.location.hash).toEqual('#/hello world');
 						});
 					});
 				});
@@ -168,7 +132,7 @@ describe('pseudositer', function() {
 				describe('which is a text file', function() {
 					
 					beforeEach(function() {
-						path = 'hello world.txt';
+						setPath('#/hello world.txt');
 					});
 
 					it('should load the text file content', function() {
@@ -183,21 +147,21 @@ describe('pseudositer', function() {
 				describe('which is an image', function() {
 
 					beforeEach(function() {
-						path ='tree.png';
+						setPath('#/tree.png');
 					});
 					
 					it('should create the image element', function() {
 						waitForPseudositer( $elem );
 						runs(function() {
-							expect($('#pseudositer-content')).toHave('img');
-							expect($('#pseudositer-content img')).toHaveAttr('src', '/simple/tree.png');
+							expect($('#pseudositer-content')).toContain('img');
+							expect($('#pseudositer-content * img')).toHaveAttr('src', '/simple/tree.png');
 						});
 					});
 
 					it('should link to the original image', function() {
 						waitForPseudositer( $elem );
 						runs(function() {
-							expect($('#pseudositer-content')).toHave('a[href="/simple/tree.png"]');
+							expect($('#pseudositer-content')).toContain('a[href="/simple/tree.png"]');
 						});
 					});
 				});
@@ -209,7 +173,7 @@ describe('pseudositer', function() {
 				var garbage = '/lkjsdiJBNC/sldkj VU&C*J##d';
 
 				beforeEach(function() {
-					path = garbage;
+					setPath('#' + garbage);
 				});
 				
 				it('should display a "content not found" notice', function() {
@@ -222,7 +186,7 @@ describe('pseudositer', function() {
 				it('should not modify the state', function() {
 					waitForPseudositer( $elem );
 					runs(function() {
-						expect(document.location.pathname).toEqual(garbage);
+						expect(document.location.hash).toEqual('#' + garbage);
 					});
 				});
 			});
@@ -232,7 +196,7 @@ describe('pseudositer', function() {
 		describe('if there was previously content on the page', function() {
 
 			beforeEach(function() {
-				path = 'hello world.txt';
+				setPath( '#/hello world.txt' );
 				// waitForPseudositer( $elem );
 				// setAddress( 'directory/first.txt' );
 				// waitForPseudositer( $elem );

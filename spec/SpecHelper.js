@@ -43,3 +43,62 @@ var setAddress = function( address ) {
 	});
 };
 
+var $elem,
+
+/**
+ * Save our original state at initialization.
+ */
+originalPath = document.location.pathname,
+preloadPath = null;
+
+if( document.location.protocol === "file:" ) {
+	alert( "Tests must be run on a server." );
+	beforeEach(function() {
+		throw "Tests must be run on a server.";
+	});
+}
+
+/**
+  * Retrieve the preload path.
+  *
+  * @return {String} the preload path
+  */
+getPreloadPath = function() {
+	return preloadPath;
+};
+
+/**
+  * Set the preload path
+  *
+  * @param newPreloadPath {String} the new preload path
+  */
+setPreloadPath = function( newPreloadPath ) {
+	preloadPath = newPreloadPath;
+};
+
+beforeEach(function() {
+	/**
+	 * Reset state
+	 **/
+	runs(function() {
+		History.replaceState( null, null, originalPath );
+	});
+	
+	waitsFor(function() {
+		return document.location.pathname === originalPath;
+	}, 1000, "Should have reset address to " + originalPath);
+
+	// this.addMatchers({
+	// 	toHavePathFragment : function() {
+			
+	// 	}
+	// });
+});
+
+afterEach(function() {
+	runs(function() {
+		preloadPath = null;
+		History.replaceState( null, null, originalPath );
+	});
+});
+
