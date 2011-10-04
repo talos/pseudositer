@@ -36,15 +36,16 @@ describe('pseudositer', function() {
 		runs(function() {
 			console.log("about to load fixtures");
 			loadFixtures('simple.html');
-			$elem = $('pseudositer-simple');
-			$elem.pseudositer( 'simple/' );
+			$elem = $('#pseudositer-simple').pseudositer( 'simple/' );
 		});
 	});
 
 	afterEach(function() {
 		runs(function() {
-			console.log("about to destroy pseudositer");
+			console.log("about to destroy pseudositer: " + $elem);
+			
 			$elem.data('pseudositer').destroy();
+			History.replaceState( null, null, originalPath );
 		});
 	});
 
@@ -60,6 +61,7 @@ describe('pseudositer', function() {
     describe('when the page is reloaded', function() {
 
 		it('should throw up a loading notice', function() {
+			
 			expect($('#pseudositer-load')).toBeVisible();
 		});
 		

@@ -13,10 +13,10 @@ jasmine.getFixtures().fixturesPath = 'fixtures';
   */
 var waitForEvent = function( $elem, eventName, timeout ) {
 	var eventFired = false;
+	$elem.one( eventName, function() {
+		eventFired = true;
+	});
 	waitsFor(function() {
-		$elem.bind( eventName, function() {
-			eventFired = true;
-		});
 		return eventFired === true;
 	}, timeout, eventName + " to fire on " + $elem.attr('id'));
 };

@@ -177,8 +177,6 @@ and the paths to your javascript libraries as appropriate:
 
     # Initialization code
     @init = () =>
-      log "init with #{rootPath}"
-
       @options = $.extend {}, $.pseudositer.defaultOptions, options
 
       # Assign the root, ensure that it ends in '/'
@@ -239,8 +237,8 @@ and the paths to your javascript libraries as appropriate:
       # TODO specifically unbind our callback -- the callback is
       # wrapped in another function by History.Adapter, so this is
       # complicated.
-      $( window ).unbind 'hashchange'
-      $( window ).unbind 'popstate'
+      #$( window ).unbind 'hashchange'
+      #$( window ).unbind 'popstate'
 
       this
 
@@ -289,10 +287,8 @@ and the paths to your javascript libraries as appropriate:
     #
     # @return this
     update = ( ) =>
+      log "updating"
       state = History.getState()
-
-      log "state url: #{state.url}"
-      log "fresh url: #{History.getState().url}"
 
       # History.replaceState( state )
 
@@ -307,21 +303,33 @@ and the paths to your javascript libraries as appropriate:
 
       # if we already have content data for state, use it
       if state.data.pseudositer?
+
         showIndices state.url
         showContent state.data.pseudositer.$content
 
       else # load the data for the state
         showLoading()
 
-        # update with the new state and hide loading
-        $.when( load( state ) )
+        dfd = new $.Deferred()
+        log "loading"
+
+        # resolve deferred from loading state
+        $.when( load state )
+          .done( (newState) -> dfd.resolve newState )
+          .fail( (errObj)   -> dfd.reject  errObj ) # TODO error handling
+
+        # reject deferred on timeout
+        setTimeout ( => dfd.reject "Timeout after #{@options.timeout} ms" ), @options.timeout
+
+        $.when( dfd )
           .done( (newState) -> History.replaceState newState ) # this will call #update again
-          .fail( (errObj)   -> log errObj ) # TODO error handling
-          .always(          =>
+          .fail( (errObj) -> log errObj )
+          .always( =>
             hideLoading()
             log "should have triggered #{@options.alwaysEvent} on #{@$el.attr('id')}"
             @$el.triggerHandler @options.alwaysEvent
           )
+
       this
 
     # Obtain a {Promise} object that, once done, has loaded and cached
@@ -429,8 +437,8 @@ and the paths to your javascript libraries as appropriate:
 
       # use the handler in @options.map
       if @options.map[ suffix ]?
-        dfd = @options.map[ suffix ] getAbsPath pathToContent
-        dfd.promise()
+        log "firing handler #{@options.map[ suffix ]}"
+        @options.map[ suffix ] getAbsPath pathToContent
       else # log an error if there's no handler
         log "No handler for file suffix #{suffix}."
         dfd = new $.Deferred().reject().promise()
@@ -500,6 +508,7 @@ and the paths to your javascript libraries as appropriate:
     indexClass     : 'pseudositer-index'
     linkSelector   : 'a:not([href^="?"],[href^="/"])' # Find links from an index page that go deeper
     alwaysEvent    : 'pseudositer-always'
+    timeout        : 500
     map :
       png : loadImage
       gif : loadImage
