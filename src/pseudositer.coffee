@@ -1,7 +1,43 @@
 ###
-# Pseudositer 0.0.4 content management for the lazy
-#
-# kudos to coffee-plate https://github.com/pthrasher/coffee-plate
+Pseudositer 0.0.4 content management for the lazy
+
+kudos to coffee-plate https://github.com/pthrasher/coffee-plate
+
+To use pseudositer, call the plugin upon an HTML element with an argument for
+the path to your content.
+
+Read the documentation at http://www.github.com/talos/pseudositer for other
+options.
+
+You can use the following boilerplate to get pseudositer running.
+Substitute the path to your content in place of "path/to/content/index/",
+and the paths to your javascript libraries as appropriate:
+
+<html>
+  <head>
+
+    <!-- jQuery -->
+    <script type="text/javascript" src="lib/jquery/jquery-1.6.4.min.js"></script>
+
+    <!-- History.js -->
+    <script>if ( typeof window.JSON === 'undefined' ) { document.write('<script type="text/javascript" src="lib/history.js/json2.js"><\/script>'); }</script>
+    <script type="text/javascript" src="lib/history.js/amplify.store.js"></script>
+    <script type="text/javascript" src="lib/history.js/history.adapter.jquery.js"></script>
+    <script type="text/javascript" src="lib/history.js/history.js"></script>
+    <script type="text/javascript" src="lib/history.js/history.html4.js"></script>
+
+    <!-- pseudositer -->
+    <script type="text/javascript" src="lib/pseudositer/pseudositer.js"></script>
+    <script type="text/javascript">
+      $(document).ready(function() {
+          $('#pseudositer').pseudositer('path/to/content/index/');
+      });
+   </script>
+  </head>
+  <body>
+    <div id="pseudositer" />
+  </body>
+</html>
 ###
 
 (($) ->
@@ -9,6 +45,54 @@
   ###
   # Utility functions
   ###
+
+  # Log an object
+  #
+  # @param obj the {Object} to log
+  log = ( obj ) ->
+
+    if console?
+      if console.log?
+        console.log obj
+
+    undefined
+
+  # Generate an image element wrapped in a link to the image
+  #
+  # @param pathToImage the path to the image
+  #
+  # @return {Promise} that resolves with a single argument that
+  # is an image tag wrapped in a link to the image.
+  loadImage = ( pathToImage ) ->
+    new $.Deferred()
+      .resolve $( 'a' ).attr 'href', pathToImage
+        .append $( 'img' ).attr 'src', pathToImage
+      .promise()
+
+  # Generate a div with text from a text file
+  #
+  # @param pathToText the path to the text file
+  #
+  # @return {Promise} that resolves with a single argument
+  # that is a div tag with the content of the text file
+  loadText = ( pathToText ) ->
+    dfd = new $.Deferred ->
+      $.get pathToText, ( responseText ) =>
+        dfd.resolve $( 'div' ).text responseText
+
+  # Get the current path without the filename
+  #
+  # @return {String} the currently displayed path, without the
+  # file name
+  getPathWithoutFilename = ->
+    path = location.pathname
+
+    # if there's a file at the end, lop it off.
+    if getSuffix( path )?
+      ary = path.split '/'
+      ary[ 0...ary.length - 1 ].join( '/' ) + '/'
+    else
+      path
 
   # Obtain the path component of an absolute URL.  For example:
   #
@@ -57,11 +141,11 @@
 
     trail
 
-  # Obtain the file type suffix (after a period)
+  # Obtain the lowercase file type suffix (after a period)
   #
   # @param path the path to the file
   #
-  # @return {String} the suffix, or null if there is none.
+  # @return {String} the lowercase suffix, or null if there is none.
   getSuffix = ( path ) ->
     splitBySlash = path.split '/'
     fileName = splitBySlash[ splitBySlash.length - 1 ]
@@ -69,14 +153,14 @@
     splitByDot = fileName.split('.')
 
     if splitByDot.length > 1
-      splitByDot[ splitByDot.length - 1 ]
+      splitByDot[ splitByDot.length - 1 ].toLowerCase()
     else
       null
 
   ###
   # Plugin code
   ###
-  $.pseudositer = (el, options) ->
+  $.pseudositer = (el, rootPath, options) ->
 
     # Access to jQuery and DOM versions of element
     @el = el
@@ -85,23 +169,27 @@
     # Add a reverse reference to the DOM object
     @$el.data "pseudositer", @
 
-    # Cache of links by path.  Each value is an array of <a> links.
-    @pathLinks = {}
+    # Cache of index elements by path.  Each value is an array of <a> elements.
+    @pathIndices = {}
 
-    # Cache of states by URL.  Each value is the State.
+    # Cache of states by URL.  Each value is a {State}.
     @cachedStates = {}
 
     # Initialization code
-    @init = (rootPath) =>
+    @init = () =>
       @options = $.extend {}, $.pseudositer.defaultOptions, options
 
       # Assign the root, ensure that it ends in '/'
-      @rootPath = if rootPath.charAt( rootPath.length - 1 ) is '/' then rootPath else "#{rootPath}/"
+      rootPath = if rootPath.charAt( rootPath.length - 1 ) is '/' then rootPath else "#{rootPath}/"
+      if rootPath.charAt( 0 ) is '/'
+        @rootPath = rootPath # absolute
+      else
+        @rootPath = getPathWithoutFilename() + rootPath # relative
 
       # Create loading div if one doesn't already exist,
       # and keep reference to the div.
-      if $(@options.loadingClass).length is 0
-        @$loading = $('<div>').addClass @options.loadingClass
+      if $( @options.loadingClass ).length is 0
+        @$loading = $( '<div>' ).addClass @options.loadingClass
         @$el.append( @$loading )
       else
         @$loading = $ @options.loadingClass
@@ -117,12 +205,16 @@
       else
         @$content = $ @options.contentClass
 
-      # Bind state change to private methods.
-      History.Adapter.bind window, 'statechange', () =>
-        updateView History.getState()
+      # Remember event callback so we can unbind it later
+      @eventCallback = () -> update()
+        # log "fresh getstate: #{History.getState()}"
+        # update History.getState()
+
+      # Bind state change to callback
+      History.Adapter.bind window, 'statechange', @eventCallback
 
       # Immediately update view
-      updateView History.getState()
+      update()
 
       # return this
       this
@@ -135,11 +227,18 @@
     #
     # @return this
     @destroy = =>
-
       # Empty out the original element.
       @$el.empty()
 
-      # TODO Clear all event bindings.
+      # History.Adapter.bind may have registered either of these
+      # $( window ).unbind 'hashchange', @eventCallback
+      # $( window ).unbind 'popstate', @eventCallback
+
+      # TODO specifically unbind our callback -- the callback is
+      # wrapped in another function by History.Adapter, so this is
+      # complicated.
+      $( window ).unbind 'hashchange'
+      $( window ).unbind 'popstate'
 
       this
 
@@ -147,63 +246,41 @@
     # Private methods.
     ###
 
-    # Get the class name for links of a specified level.
+    # Get the class name for an index of a specified level.
     #
-    # @param level the {int} level, starting with 0, of the links.
-    #
-    # @return {String} the name of the class
-    getLinkClassForLevel = ( level ) =>
-
-      @options.linkClass + '-' + level
-
-    # Get the class name for links with a certain path.
-    #
-    # @param path the {String} path to the links.
+    # @param level the {int} level, starting with 0, of the index.
     #
     # @return {String} the name of the class
-    # getLinkClassForPath = ( path ) =>
+    getIndexClassForLevel = ( level ) =>
 
-    #   # generate a safe version of the path to use as the class name
-    #   name = path.replace /[^a-zA-Z0-9]/g, '-'
-    #   @options.linkClass + '-' + name
+      @options.indexClass + '-' + level
 
-    # Calculate the actual path for an ajax request from a path from
+    # Construct the absolute path for an ajax request from a path from
     # the address bar.  Resolves the path against @rootPath.
     #
     # @param path a path from the address bar
     #
     # @return {String} a path that can be used for an ajax request.
-    resolve = (path) =>
+    getAbsPath = (path) =>
 
       # @rootPath always ends in '/'
-      if path.charAt 0 is '/' then @rootPath + path.substr 1 else @rootPath + path
+      if path.charAt( 0 ) is '/' then @rootPath + path.substr 1 else @rootPath + path
 
     # Show the loading notice
     #
-    # @return this
+    # @return {Promise} that is done once the loading notice is visible
     showLoading = =>
-
-      @$loading.show()
-      this
+      dfd = new $.Deferred()
+      @$loading.show 'fast', -> dfd.resolve()
+      dfd.promise()
 
     # Hide the loading notice
     #
-    # @return this
+    # @return {Promise} that is done once the loading notice is hidden
     hideLoading = =>
-
-      @$loading.hide()
-      this
-
-    # Load a URL using AJAX
-    #
-    # @param url the URL to load
-    # @param callback a callback function that will be passed a jqXHR
-    # object.
-    # loader = $.Deferred() url, callback) ->
-    #   $.get url, (data, textStatus, jqXHR) ->
-    #     callback(jqXHR)
-
-    #   undefined
+      dfd = new $.Deferred()
+      @$loading.hide 'fast', -> dfd.resolve()
+      dfd.promise()
 
     # Update browser to display the view associated with a state.
     # Will check the cache to see if this state has been loaded before.
@@ -211,38 +288,44 @@
     # @param state the State object to use when updating the view.
     #
     # @return this
-    updateView = ( state ) =>
+    update = ( state = History.getState() ) =>
+      log "state url: #{state.url}"
+      log "fresh url: #{History.getState().url}"
 
       History.replaceState( state )
 
       # if we've visited the state before and grabbed data, reuse that object
-      if state.url in cachedStates
-        state = cachedStates[ state.url ]
+      if @cachedStates[ state.url ]?
+        state = @cachedStates[ state.url ]
 
       # store state in cache if it has pseudositer data.
       else
         if state.data.pseudositer?
-          cachedStates[ state.url ] = state
+          @cachedStates[ state.url ] = state
 
       # if we already have content data for state, use it
       if state.data.pseudositer?
-        showLinks state.url
+        showIndices state.url
 
         showContent state.data.pseudositer.$content
 
       else # load the data for the state
         showLoading()
 
-        # call back updateView after the state is loaded
+        # call back update after the state is loaded
+        # successfully
         $.when( load( state ) )
-          .done   => updateView state
-          .fail   => console.log state # TODO actual logging
-          .always => hideLoading()
-
+          .done( (newState) -> update newState )
+          .fail( (errObj)   -> log errObj ) # TODO error handling
+          .always(          =>
+            hideLoading()
+            log "should have triggered #{@options.alwaysEvent} on #{@$el.attr('id')}"
+            @$el.triggerHandler @options.alwaysEvent
+          )
       this
 
     # Obtain a {Promise} object that, once done, has loaded and cached
-    # (into @pathLinks) all the paths leading to the supplied state's content,
+    # (into @pathIndices) all the paths leading to the supplied state's content,
     # and also loads the content into that state.
     #
     # @param state the {State} to load
@@ -252,7 +335,7 @@
     # the new {State} as an argument.
     load = ( state ) =>
 
-      Deferred dfd = new $.Deferred()
+      dfd = new $.Deferred()
       url = state.url
 
       trails = getTrails url
@@ -260,8 +343,8 @@
       # pipe an additional request for any trails that are not in the cache
       for level in [ 0...trails.length ]
 
-        trail = trails[ i ]
-        unless trail in @pathLinks
+        trail = trails[ level ]
+        unless @pathIndices[ trail ]?
           dfd = dfd.pipe loadIndex trail
 
       path = trails[ trails.length - 1 ]
@@ -270,44 +353,55 @@
       # load the content.  once the content is loaded, resolve
       # the deferred with a new state based off of the content
       # and unfolded path.
-      $.when( unfold( path ) ).done (unfoldedPath) =>
-        loadContent( unfoldedPath ).done ($content) =>
-          state = History.createStateObject
-            pseudositer :
-              $content  : $content,
-            null,
-            unfoldedPath
-          dfd.resolve state
+      log "pre-unfolded path: #{path}"
+      $.when( unfold( path ) ).done ( unfoldedPath ) ->
+        log "unfolded path: #{unfoldedPath}"
+
+        loadContent( unfoldedPath )
+          .done ( $content ) ->
+            newState = History.createStateObject
+              pseudositer :
+                $content  : $content,
+              null,
+              unfoldedPath
+            log "newState #{newState}"
+            dfd.resolve newState
+          .fail ( failObj ) ->
+            dfd.reject failObj
 
       dfd.promise()
 
-
     # Asynchronously determine the nearest content to this path,
-    # loading links into cache all along the way.
+    # loading indices into cache all along the way.
     #
     # @param path the path to unfold
     # @param dfd An optional {Deferred} to resolve once the unfolding
-    # is done
+    # is done.  By default creates a new {Deferred}
     #
     # @return {Promise} that will be resolved with an argument
     # that is the unfolded path
-    unfold = ( path, dfd = $.Deferred ) =>
+    unfold = ( path, dfd = new $.Deferred() ) =>
 
-      # if path already points to content, resolve now
-      if getSuffix path isnt null
-        dfd.resolve( path )
+      # if path already points to content, resolve the deferred
+      if getSuffix( path ) isnt null
+
+        dfd.resolve path
       else
 
-        # when the index is loaded, call unfold again but reusing
-        # the deferred object
-        $.when( loadIndex ).done ( $links ) =>
-          unfold( $links.first().attr 'href', dfd )
+        # when the index is loaded, call unfold again using the first
+        # link and reusing the deferred object
+        $.when( loadIndex( path ) ).done ( $links ) =>
+          log "$links: #{$links.toString()}"
+          if $links.length is 0 # empty index page
+            dfd.reject "#{path} has no content"
+          else
+            unfold $links.first().attr( 'href' ), dfd
 
       dfd.promise()
 
     # If there is no entry for the index,
     # make an ajax request for a path to the index page, and cache
-    # all the links on that index page into @pathLinks.
+    # all the links on that index page into @pathIndices.
     #
     # @param path the path to an index page
     #
@@ -315,75 +409,73 @@
     # argument that is an array of all the links in that index
     loadIndex = ( path ) =>
       dfd = new $.Deferred()
-      if @pathLinks[ path ]?
-        dfd.resolve @pathLinks[ path ]
+      if @pathIndices[ path ]?
+        dfd.resolve @pathIndices[ path ]
       else
-        $.when $.get resolve path, data =>
-          @pathLinks[ path ] = $( data ).find options.linkSelector
-          dfd.resolve( @pathLinks [ path ] )
+        $.when $.get getAbsPath path, ( responseText ) =>
+          @pathIndices[ path ] = $( data ).find options.linkSelector
+          dfd.resolve( @pathIndices [ path ] )
       dfd
 
     # Load the content located at a path
     #
     # @param pathToContent the path to the content
     #
-    # @return {Promise} that, when done, contains the loaded content.
+    # @return {Promise} that resolves with a single argument of
+    # fully loaded DOM content.  Will fail if there is no handler
+    # for the file suffix.
     loadContent = ( pathToContent ) =>
-      dfd = new $.Deferred()
-
       suffix = getSuffix pathToContent
-      switch suffix
-        when 'png' then
 
-      dfd.promise()
+      # use the handler in @options.map
+      if @options.map[ suffix ]?
+        dfd = @options.map[ suffix ] getAbsPath pathToContent
+        dfd.promise()
+      else # log an error if there's no handler
+        log "No handler for file suffix #{suffix}."
+        dfd = new $.Deferred().reject().promise()
 
-    loadImage = ( pathToImage ) =>
-      object.content = $( 'img' ).attr 'src', resolvedPath
-
-    loadText = ( pathToText ) =>
-
-    # Show the links for an unfolded url, in addition to the links
-    # for all its
-    # parents.  This data should already have been loaded into
-    # @pathLinks .
+    # Show the index for an unfolded url, in addition to all its parent
+    # index pages. This data should already have been loaded into
+    # @pathIndices .
     #
     # @param url the URL to show links for
     #
     # @return this
-    showLinks = ( url ) =>
+    showIndices = ( url ) =>
 
       trails = getTrails url
 
       # mark all link elements as stale before we iterate through the
       # path
-      $( '.' + @options.linkClass ).addClass @options.staleClass
+      $( '.' + @options.indexClass ).addClass @options.staleClass
 
       for level in [ 0...trails.length ]
 
         trail = trails[ level ]
 
         # If a class for the level is not on the page, create it
-        levelClass = getLinkClassForLevel level
-        $linkElem = $( '.' + levelClass )
-        if $linkElem.length is 0
-          $linkElem = $( 'div' )
-            .addClass @options.linkClass + ' ' + levelClass
+        levelClass = getIndexClassForLevel level
+        $index = $( '.' + levelClass )
+        if $index.length is 0
+          $index = $( 'div' )
+            .addClass @options.indexClass + ' ' + levelClass
             .data 'pseudositer', { }
-          @$el.append $linkElem
+          @$el.append $index
 
         # If the previous path is the same, leave the element alone
         # otherwise, change the path and append the links
-        prevPath = $linkElem.data('pseudositer').path
+        prevPath = $index.data( 'pseudositer' ).path
         unless trail is prevPath
-          $linkElem.empty ()
-          $linkElem.data( 'pseudositer', path : trail )
-          $linkElem.append @pathLinks[ trail ]
+          $index.empty()
+          $index.data( 'pseudositer', path : trail )
+          $index.append @pathIndices[ trail ]
 
-        # ensure that this link element is not removed.
-        $linkElem.removeClass @options.staleClass
+        # ensure that this index element is not removed.
+        $index.removeClass @options.staleClass
 
-      # remove any link elements that are deeper than the new path
-      $( '.' + @options.linkClass + '.' + @options.staleClass ).remove()
+      # remove any index elements that are deeper than the new path
+      $( '.' + @options.indexClass + '.' + @options.staleClass ).remove()
 
       this
 
@@ -393,7 +485,7 @@
     #
     # @return this
     showContent = ( $content ) =>
-      $( @$content ).empty ()
+      $( @$content ).empty()
         .append( $content );
       this
 
@@ -405,20 +497,27 @@
     loadingClass   : 'pseudositer-load'
     contentClass   : 'pseudositer-content'
     staleClass     : 'pseudositer-stale'
-    linkClass      : 'pseudositer-links'
-  	linkSelector   : 'a:not([href^="?"],[href^="/"])', # Find links from a directory listing that go deeper
+    indexClass     : 'pseudositer-index'
+    linkSelector   : 'a:not([href^="?"],[href^="/"])' # Find links from an index page that go deeper
+    alwaysEvent    : 'pseudositer-always'
+    map :
+      png : loadImage
+      gif : loadImage
+      jpg : loadImage
+      jpeg: loadImage
+      txt : loadText
+      html: loadText
 
-
-  $.fn.pseudositer = (options) ->
+  $.fn.pseudositer = (rootPath, options) ->
     $.each @, (i, el) ->
       $el = ($ el)
 
-      # Only instantiate if not previously done.
+      # Only instantiate if not previously instantiated.
       unless $el.data 'pseudositer'
         # call plugin on el with options, and set it to the data.
         # the instance can always be retrieved as element.data 'pseudositer'
         # You can do things like:
         # (element.data 'pseudositer').publicMethod1();
-        $el.data 'pseudositer', new $.pseudositer el, options
+        $el.data 'pseudositer', new $.pseudositer el, rootPath, options
   undefined
 )(jQuery)
