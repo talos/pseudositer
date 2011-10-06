@@ -6,9 +6,7 @@ describe('pseudositer', function() {
 	beforeEach(function() {
 		runs(function() {
 			// simulate having the hashpath there before the page loads
-			if( getPreloadPath() !== null ) {
-				History.replaceState( null, null, getPreloadPath() );
-			}
+			setFragment(getPreloadPath());
 
 			setFixtures( $( '<div />' ).attr( 'id', 'pseudositer' ) );
 			$elem = $('#pseudositer').pseudositer( 'fixtures/simple/' );
@@ -58,7 +56,7 @@ describe('pseudositer', function() {
 			describe('if the state is a directory', function() {
 
 				beforeEach(function() {
-					setPath('#/directory/');
+					setPreloadFragment('/directory/');
 				});
 				
 				it('should display the links of that directory', function() {
@@ -87,7 +85,7 @@ describe('pseudositer', function() {
 			describe('if the state is a file', function() {
 				
 				beforeEach(function() {
-					setPath( '#/hello world.txt' );
+					setPreloadFragment( '/hello world.txt' );
 				});
 				
 				it('should not display the link to the file', function() {
@@ -118,7 +116,7 @@ describe('pseudositer', function() {
 				describe('not including the file type', function() {
 					
 					beforeEach(function() {
-						setPath('#/hello world');
+						setPreloadFragment('/hello world');
 					});
 
 					it('should leave the state alone', function() {
@@ -132,7 +130,7 @@ describe('pseudositer', function() {
 				describe('which is a text file', function() {
 					
 					beforeEach(function() {
-						setPath('#/hello world.txt');
+						setPreloadFragment('/hello world.txt');
 					});
 
 					it('should load the text file content', function() {
@@ -147,7 +145,7 @@ describe('pseudositer', function() {
 				describe('which is an image', function() {
 
 					beforeEach(function() {
-						setPath('#/tree.png');
+						setPreloadFragment('/tree.png');
 					});
 					
 					it('should create the image element', function() {
@@ -173,7 +171,7 @@ describe('pseudositer', function() {
 				var garbage = '/lkjsdiJBNC/sldkj VU&C*J##d';
 
 				beforeEach(function() {
-					setPath('#' + garbage);
+					setPreloadFragment(garbage);
 				});
 				
 				it('should display a "content not found" notice', function() {
@@ -196,7 +194,7 @@ describe('pseudositer', function() {
 		describe('if there was previously content on the page', function() {
 
 			beforeEach(function() {
-				setPath( '#/hello world.txt' );
+				setPreloadFragment( '/hello world.txt' );
 				// waitForPseudositer( $elem );
 				// setAddress( 'directory/first.txt' );
 				// waitForPseudositer( $elem );

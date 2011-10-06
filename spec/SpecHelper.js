@@ -35,11 +35,11 @@ var waitForPseudositer = function( $elem ) {
   * Synchronously change the address bar to an address,
   * by wrapping the call in a "runs" block.
   *
-  * @param address the address to set the address bar to.
+  * @param fragment the fragment to set in the address bar.
   */
-var setAddress = function( address ) {
+var setFragment = function( fragment ) {
 	runs(function() {
-		History.replaceState( null, null, address );
+		document.location.hash = fragment;
 	});
 };
 
@@ -48,8 +48,7 @@ var $elem,
 /**
  * Save our original state at initialization.
  */
-originalPath = document.location.pathname,
-preloadPath = null;
+preloadFragment = "";
 
 if( document.location.protocol === "file:" ) {
 	alert( "Tests must be run on a server." );
@@ -59,46 +58,34 @@ if( document.location.protocol === "file:" ) {
 }
 
 /**
-  * Retrieve the preload path.
+  * Retrieve the preload fragment.
   *
-  * @return {String} the preload path
+  * @return {String} the preload fragment
   */
-getPreloadPath = function() {
-	return preloadPath;
+getPreloadFragment = function() {
+	return preloadFragment;
 };
 
 /**
-  * Set the preload path
+  * Set the preload fragment
   *
-  * @param newPreloadPath {String} the new preload path
+  * @param newPreloadFragment {String} the new preload fragment
   */
-setPreloadPath = function( newPreloadPath ) {
-	preloadPath = newPreloadPath;
+setPreloadFragment = function( newPreloadFragment ) {
+	preloadFragment = newPreloadFragment;
 };
 
 beforeEach(function() {
 	/**
 	 * Reset state
 	 **/
-	runs(function() {
-		History.replaceState( null, null, originalPath );
-	});
-	
-	waitsFor(function() {
-		return document.location.pathname === originalPath;
-	}, 1000, "Should have reset address to " + originalPath);
-
-	// this.addMatchers({
-	// 	toHavePathFragment : function() {
-			
-	// 	}
-	// });
+	setFragment("");
 });
 
 afterEach(function() {
+	setFragment("");
 	runs(function() {
-		preloadPath = null;
-		History.replaceState( null, null, originalPath );
+		preloadFragment = "";
 	});
 });
 

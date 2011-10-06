@@ -4,20 +4,30 @@
     <!-- jQuery -->
     <script type="text/javascript" src="../lib/jquery/jquery-1.6.4.min.js"></script>
 
-    <!-- History.js -->
-    <script>if ( typeof window.JSON === 'undefined' ) { document.write('<script type="text/javascript" src="../lib/history.js/json2.js"><\/script>'); }</script>
-    <script type="text/javascript" src="../lib/history.js/amplify.store.js"></script>
-    <script type="text/javascript" src="../lib/history.js/history.adapter.jquery.js"></script>
-    <script type="text/javascript" src="../lib/history.js/history.js"></script>
-    <script type="text/javascript" src="../lib/history.js/history.html4.js"></script>
-
     <!-- pseudositer -->
     <script type="text/javascript" src="../lib/pseudositer/pseudositer.js"></script>
     <script type="text/javascript">
       $(document).ready(function() {
           $('#pseudositer').pseudositer('simple/');
       });
-   </script>
+    </script>
+	
+	<!-- simple inline style example -->
+	<style type="text/css" >
+	  .pseudositer-content {
+	    border: 1px solid red;
+	    margin: .5em;
+	    padding: .5em;
+	  }
+	  .pseudositer-index {
+	    border:  1px solid black;
+	    margin: .5em;
+	  }
+	  .pseudositer-index a {
+	    margin: .5em;
+	  }
+	</style>
+	
   </head>
   <body>
     <div id="pseudositer" />
