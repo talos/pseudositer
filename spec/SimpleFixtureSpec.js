@@ -6,7 +6,7 @@ describe('pseudositer', function() {
 	beforeEach(function() {
 		runs(function() {
 			// simulate having the hashpath there before the page loads
-			setFragment(getPreloadPath());
+			setFragment(getPreloadFragment());
 
 			setFixtures( $( '<div />' ).attr( 'id', 'pseudositer' ) );
 			$elem = $('#pseudositer').pseudositer( 'fixtures/simple/' );

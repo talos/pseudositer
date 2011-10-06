@@ -23,12 +23,12 @@ var waitForEvent = function( $elem, eventName, timeout ) {
 
 /**
   * Convenience method that waits 1 second for the
-  * 'pseudositer-always' event to fire upon an element.
+  * 'pseudositer-loaded' event to fire upon an element.
   *
   * @param $elem the element to observe.
   */
 var waitForPseudositer = function( $elem ) {
-	waitForEvent( $elem, 'pseudositer-always', 1000 );
+	waitForEvent( $elem, 'pseudositer-loaded', 1000 );
 };
 
 /**
