@@ -20,16 +20,16 @@ Content and directories are cached and not reloaded unless the user reloads the 
 
 Getting started with Pseudositer is easy. Make sure to include
 
-  <!-- jQuery -->
-  <script type="text/javascript" src="lib/jquery/jquery-1.6.4.min.js"></script>
-  
-  <!-- pseudositer -->
-  <script type="text/javascript" src="lib/pseudositer/pseudositer.js"></script>
-  <script type="text/javascript">
-    $(document).ready(function() {
-      $('#pseudositer').pseudositer('path/to/content/index/');
-    });
-  </script>
+    <!-- jQuery -->
+    <script type="text/javascript" src="lib/jquery/jquery-1.6.4.min.js"></script>
+    
+    <!-- pseudositer -->
+    <script type="text/javascript" src="lib/pseudositer/pseudositer.js"></script>
+    <script type="text/javascript">
+      $(document).ready(function() {
+        $('#pseudositer').pseudositer('path/to/content/index/');
+      });
+    </script>
 
 within the an HTML page's `<head>` declaration, modifying the path to the pseudositer and jQuery source if need be.
 
