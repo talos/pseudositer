@@ -6,11 +6,11 @@
 
 ### what it is
 
-Pseudositer is a jQuery plugin that dynamically populates a single page with content from AJAX requests for Apache (or equivalent) index pages. Any hierarchy of text, image, and other files turns into a site users navigate one HTML file, with nary a line of server-side code.
+Pseudositer is a jQuery plugin that creates a website via AJAX requests for Apache (or equivalent) index pages. Users can navigate folders of text, image, and other files within one HTML file, with nary a line of server-side code.
 
-The plugin can be passed a series of mappings to load different extensions specially. By default, images are loaded into an `img` tag, and .txt and .html files are loaded into a `div`.
+You can pass mappings to handle special extensions. By default, images are loaded into an `img` tag, and .txt and .html files are loaded into a `div`.
 
-The plugin generates an address hash. Users can bookmark and browse backwards and forwards within the pseudositer page's content.  Content and index listings are cached.
+The plugin generates an address hash. Users can bookmark, browse backwards and forwards, and link within the pseudositer page's content.  Content and index listings are cached.
 
 - - -
 
