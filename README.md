@@ -1,6 +1,6 @@
 # pseudositer
 
-*content management for the lazy*
+*content management for the l a z y*
 
 - - -
 
