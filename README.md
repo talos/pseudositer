@@ -39,15 +39,15 @@ Likewise, modify the `path/to/content/index` argument to reflect where your site
 
 ### pros & cons
 
-A fair & balanced assessment:
+A fair & balanced assessment.
 
-##### Pros:
+#### Pros:
 
 1. Like a content management system, you have total control over the styling of all pages at all times. All links will always work.
 2. It's easy to generate or reorganize a site.  Rearrange directories and place files or images using the file browser of your choice. To make a photo album, upload a folder to your content directory that has JPGs with descriptive names in it. Done!
 3. The page never flashes as the user navigates, since the browser never reloads.  It is possible to integrate smooth transitions.
 
-##### Cons:
+#### Cons:
 
 1. The site won't degrade gracefully for users without Javascript.
 2. If you're using Apache, you must have "Options +Indexes" set for all directories in the pseudosite's content.  Other server packages must generate a similar index.
