@@ -33,7 +33,7 @@ Getting started with Pseudositer is easy. Make sure to include
 
 within the an HTML page's `<head>` declaration, modifying the path to the pseudositer and jQuery source if need be.
 
-Likewise, modify the 'path/to/content/index' argument to reflect where your site's content is located.  This will be resolved relative to the HTML page.
+Likewise, modify the `path/to/content/index` argument to reflect where your site's content is located.  This will be resolved relative to the HTML page.
 
 - - -
 
