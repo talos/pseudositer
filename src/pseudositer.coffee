@@ -191,20 +191,6 @@ and the paths to your javascript libraries as appropriate:
           else
             @realPath = @visiblePath + '/' + hiddenPath
 
-      # Create loading div if one doesn't already exist,
-      # and keep reference to the div.
-      if $( '.' + @options.loadingClass ).length is 0
-        @$loading = $( '<div>' ).addClass @options.loadingClass
-        @$el.append( @$loading )
-      else
-        @$loading = $ @options.loadingClass
-
-      # Hide loading by default
-      hideLoading()
-
-      # Initially loading div is hidden
-      @$loading.hide()
-
       # Create content div if one doesn't already exist,
       # and keep reference to the div.
       if $( '.' + @options.contentClass ).length is 0
@@ -266,22 +252,6 @@ and the paths to your javascript libraries as appropriate:
       # path should start with '/'
       @realPath + path.substr 1
 
-    # Show the loading notice
-    #
-    # @return {Promise} that is done once the loading notice is visible
-    showLoading = =>
-      dfd = new $.Deferred()
-      @$loading.show 'fast', -> dfd.resolve()
-      dfd.promise()
-
-    # Hide the loading notice
-    #
-    # @return {Promise} that is done once the loading notice is hidden
-    hideLoading = =>
-      dfd = new $.Deferred()
-      @$loading.hide 'fast', -> dfd.resolve()
-      dfd.promise()
-
     # Update browser to display the view associated with the current state.
     # Only loads path indexes and content if it's not cached.
     #
@@ -304,7 +274,7 @@ and the paths to your javascript libraries as appropriate:
         @$el.triggerHandler @options.loadedEvent
 
       else # load the data for the state
-        showLoading()
+        @$el.triggerHandler @options.loadingEvent
 
         progress = new $.Deferred()
 
@@ -337,7 +307,6 @@ and the paths to your javascript libraries as appropriate:
             else # update will happen due to hash change
               document.location.hash = loadedPath )
           .fail( (errObj)     -> log errObj )
-          .always( -> hideLoading() )
 
       this
 
@@ -532,13 +501,12 @@ and the paths to your javascript libraries as appropriate:
 
   # object literal containing default options
   $.pseudositer.defaultOptions =
-    loadingClass   : 'pseudositer-load'
     contentClass   : 'pseudositer-content'
     staleClass     : 'pseudositer-stale'
     indexClass     : 'pseudositer-index'
     linkSelector   : 'a:not([href^="?"],[href^="/"])' # Find links from an index page that go deeper
-    loadingEvent   : 'pseudositer-loading'
-    loadedEvent    : 'pseudositer-loaded'
+    loadingEvent   : 'loading.pseudositer'
+    loadedEvent    : 'loaded.pseudositer'
     timeout        : 1000
     recursion      : true
     map :

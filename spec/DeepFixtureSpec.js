@@ -1,12 +1,14 @@
 describe('pseudositer', function() {
+	var $elem,
+	pseudoPath = 'fixtures/deep/',
+	realPath = getIndexPath() +'/'+ pseudoPath;
+
 	/**
 	 * Load fixtures.
 	 **/
 	beforeEach(function() {
-		runs(function() {
-			setFixtures( $( '<div />' ).attr( 'id', 'pseudositer' ) );
-			$elem = $('#pseudositer').pseudositer( 'fixtures/deep/' );
-		});
+		setFixtures( $( '<div />' ).attr( 'id', 'pseudositer' ) );
+		$elem = $('#pseudositer');
 	});
 
 	afterEach(function() {
@@ -16,7 +18,11 @@ describe('pseudositer', function() {
 	});
 	
 	it('should delve to deepest level', function() {
-		expect(document.location.hash).toEqual( '' );
+		$elem.pseudositer( pseudoPath );
+		waitForPseudositer( $elem );
+		runs(function() {
+			expect(document.location.hash).toEqual( '#/a/b/c/d/e/content.html' );
+		});
 	});
 
 });

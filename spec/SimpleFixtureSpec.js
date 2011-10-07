@@ -1,16 +1,14 @@
 describe('pseudositer', function() {
+	var $elem,
+	pseudoPath = 'fixtures/simple/',
+	realPath = getIndexPath() +'/'+ pseudoPath;
 
 	/**
 	 * Load fixtures.
 	 **/
 	beforeEach(function() {
-		runs(function() {
-			// simulate having the hashpath there before the page loads
-			setFragment(getPreloadFragment());
-
-			setFixtures( $( '<div />' ).attr( 'id', 'pseudositer' ) );
-			$elem = $('#pseudositer').pseudositer( 'fixtures/simple/' );
-		});
+		setFixtures( $( '<div />' ).attr( 'id', 'pseudositer' ) );
+		$elem = $('#pseudositer');
 	});
 
 	afterEach(function() {
@@ -21,18 +19,27 @@ describe('pseudositer', function() {
 	
     describe('when the page is reloaded', function() {
 
-		it('should throw up a loading notice', function() {
+		it('should send loading event', function() {
+			spyOnEvent($elem, 'loading.pseudositer')
 			runs(function() {
-				expect($('.pseudositer-load')).toBeVisible();
+				$elem.pseudositer( pseudoPath );
+			});
+			waitForPseudositer($elem);
+			runs(function() {
+				expect('loading.pseudositer').toHaveBeenTriggeredOn($elem);
 			});
 		});
 		
 		describe('when the content is finished loading', function() {
 
-			it('should remove the loading notice', function() {
-				waitForPseudositer( $elem );
+			it('should send loaded event', function() {
+				spyOnEvent($elem, 'loaded.pseudositer')
 				runs(function() {
-					expect($('.pseudositer-load')).not.toBeVisible();
+					$elem.pseudositer( pseudoPath );
+				});
+				waitForPseudositer($elem);
+				runs(function() {
+					expect('loaded.pseudositer').toHaveBeenTriggeredOn($elem);
 				});
 			});
 			
@@ -44,6 +51,9 @@ describe('pseudositer', function() {
 		describe('if state is root', function() {
 
 			it('should replace the state with that of the deepest earliest alphabetized content', function() {
+				runs(function() {
+					$elem.pseudositer( pseudoPath );
+				});
 				waitForPseudositer( $elem );
 				runs(function() {
 					expect(document.location.hash).toEqual('#/directory/first.txt');
@@ -55,57 +65,73 @@ describe('pseudositer', function() {
 
 			describe('if the state is a directory', function() {
 
-				beforeEach(function() {
-					setPreloadFragment('/directory/');
-				});
-				
 				it('should display the links of that directory', function() {
+					document.location.hash = "/directory/";
+					runs(function() {
+						$elem.pseudositer( pseudoPath );
+					});
 					waitForPseudositer( $elem );
 					runs(function() {
-						expect($elem).toContain('a[href="#/directory/nested"]');
-						expect($elem).toContain('a[href="#/directory/first"]');
+						expect($elem.children()).toContain('a[href="#/directory/nested.txt"]');
+						expect($elem.children()).toContain('a[href="#/directory/first.txt"]');
 					});
 				});
 				
 				it('should replace the state with that of the deepest earliest alphabetized content', function() {
+					document.location.hash = "/directory/";
+					runs(function() {
+						$elem.pseudositer( pseudoPath );
+					});
 					waitForPseudositer( $elem );
 					runs(function() {
-						expect(document.location.hash).toEqual('#/directory/first');
+						expect(document.location.hash).toEqual('#/directory/first.txt');
 					});
 				});
 
 				it('should load the deepest earliest alphabetized content in that directory', function() {
+					document.location.hash = "/directory/";
+					runs(function() {
+						$elem.pseudositer( pseudoPath );
+					});
 					waitForPseudositer( $elem );
 					runs(function() {
-						expect($('.pseudositer-content')).toHaveText('first blood');
+						expect($('.pseudositer-content')).toHaveText(/first blood/);
 					});
 				});
 			});
 			
 			describe('if the state is a file', function() {
 				
-				beforeEach(function() {
-					setPreloadFragment( '/hello world.txt' );
-				});
-				
 				it('should not display the link to the file', function() {
+					document.location.hash = "/hello world.txt";
+					runs(function() {
+						$elem.pseudositer( pseudoPath );
+					});
 					waitForPseudositer( $elem );
 					runs(function() {
-						expect($elem).not.toContain('a[href="#/hello world"]');
+						expect($elem.children()).not.toContain('a[href="#/hello world.txt"]');
 					});
 				});
 				
 				it('should display all the links in directories containing that file', function() {
+					document.location.hash = "/hello world.txt";
+					runs(function() {
+						$elem.pseudositer( pseudoPath );
+					});
 					waitForPseudositer( $elem );
 					runs(function() {
-						expect($elem).toContain('a[href="#/directory/"]');
-						expect($elem).toContain('a[href="#/tree"]');
+						expect($('.pseudositer-index')).toContain('a[href="#/directory/"]');
+						expect($('.pseudositer-index')).toContain('a[href="#/tree.png"]');
 					});
 				});
 				
 				describe('including the file type', function() {
-					
-					it('should strip the file type from the state', function() {
+					// not currently implemented
+					xit('should strip the file type from the state', function() {
+						document.location.hash = "/hello world.txt";
+						runs(function() {
+							$elem.pseudositer( pseudoPath );
+						});
 						waitForPseudositer( $elem );
 						runs(function() {
 							expect(document.location.hash).toEqual('#/hello world');
@@ -113,13 +139,14 @@ describe('pseudositer', function() {
 					});
 				});
 				
-				describe('not including the file type', function() {
-					
-					beforeEach(function() {
-						setPreloadFragment('/hello world');
-					});
+				xdescribe('not including the file type', function() {
 
 					it('should leave the state alone', function() {
+						document.location.hash = "/hello world";
+
+						runs(function() {
+							$elem.pseudositer( pseudoPath );
+						});
 						waitForPseudositer( $elem );
 						runs(function() {
 							expect(document.location.hash).toEqual('#/hello world');
@@ -129,14 +156,14 @@ describe('pseudositer', function() {
 
 				describe('which is a text file', function() {
 					
-					beforeEach(function() {
-						setPreloadFragment('/hello world.txt');
-					});
-
 					it('should load the text file content', function() {
+						document.location.hash = "/hello world.txt";
+						runs(function() {
+							$elem.pseudositer( pseudoPath );
+						});
 						waitForPseudositer( $elem );
 						runs(function() {
-							expect($('#pseudositer-content')).toHaveText('Hello World!');
+							expect($('.pseudositer-content').children()).toHaveText(/Hello World!/);
 						});
 					});
 					
@@ -144,44 +171,53 @@ describe('pseudositer', function() {
 
 				describe('which is an image', function() {
 
-					beforeEach(function() {
-						setPreloadFragment('/tree.png');
-					});
-					
 					it('should create the image element', function() {
+						document.location.hash = "/tree.png";
+						runs(function() {
+							$elem.pseudositer( pseudoPath );
+						});
 						waitForPseudositer( $elem );
 						runs(function() {
-							expect($('#pseudositer-content')).toContain('img');
-							expect($('#pseudositer-content * img')).toHaveAttr('src', '/simple/tree.png');
+							expect($('.pseudositer-content')).toContain('img');
+							expect($('.pseudositer-content * img')).toHaveAttr('src', realPath + 'tree.png');
 						});
 					});
 
 					it('should link to the original image', function() {
+						document.location.hash = "/tree.png";
+						runs(function() {
+							$elem.pseudositer( pseudoPath );
+						});
 						waitForPseudositer( $elem );
 						runs(function() {
-							expect($('#pseudositer-content')).toContain('a[href="/simple/tree.png"]');
+							expect($('.pseudositer-content')).toContain('a[href="'+ realPath + 'tree.png"]');
 						});
 					});
 				});
-			});
+			});  // if the state is a file
 			
 			
 			describe('if the state is garbage', function() {
 				
 				var garbage = '/lkjsdiJBNC/sldkj VU&C*J##d';
-
-				beforeEach(function() {
-					setPreloadFragment(garbage);
-				});
 				
 				it('should display a "content not found" notice', function() {
+					document.location.hash = garbage;
+
+					runs(function() {
+						$elem.pseudositer( pseudoPath );
+					});
 					waitForPseudositer( $elem );
 					runs(function() {
-						expect($('#pseudositer-content')).toHaveText('not found');
+						expect($('#pseudositer-content')).toHaveText(/not found/);
 					});
 				});
 
 				it('should not modify the state', function() {
+					document.location.hash = garbage;
+					runs(function() {
+						$elem.pseudositer( pseudoPath );
+					});
 					waitForPseudositer( $elem );
 					runs(function() {
 						expect(document.location.hash).toEqual('#' + garbage);
@@ -192,13 +228,6 @@ describe('pseudositer', function() {
 		});
 		
 		describe('if there was previously content on the page', function() {
-
-			beforeEach(function() {
-				setPreloadFragment( '/hello world.txt' );
-				// waitForPseudositer( $elem );
-				// setAddress( 'directory/first.txt' );
-				// waitForPseudositer( $elem );
-			});
 
 			it('should transition out the existing content', function() {
 				throw 'not yet implemented';
@@ -215,7 +244,7 @@ describe('pseudositer', function() {
 				throw 'not yet implemented';
 			});
 		});
-    });
+    }); // when the page is reloaded
 
     describe('when the user clicks on a link', function() {
 

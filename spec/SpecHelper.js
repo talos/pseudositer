@@ -28,7 +28,7 @@ var waitForEvent = function( $elem, eventName, timeout ) {
   * @param $elem the element to observe.
   */
 var waitForPseudositer = function( $elem ) {
-	waitForEvent( $elem, 'pseudositer-loaded', 1000 );
+	waitForEvent( $elem, 'loaded.pseudositer', 1000 );
 };
 
 /**
@@ -43,12 +43,14 @@ var setFragment = function( fragment ) {
 	});
 };
 
-var $elem,
-
 /**
- * Save our original state at initialization.
- */
-preloadFragment = "";
+  * @return {String} path to the index of the executing HTML.
+  * Does not include trailing slash.
+  */
+var getIndexPath = function( ) {
+	ary = document.location.pathname.split('/');
+	return ary.slice(0, ary.length - 1).join('/');
+};
 
 if( document.location.protocol === "file:" ) {
 	alert( "Tests must be run on a server." );
@@ -58,34 +60,11 @@ if( document.location.protocol === "file:" ) {
 }
 
 /**
-  * Retrieve the preload fragment.
-  *
-  * @return {String} the preload fragment
+  * Remove the fragment after each test.
   */
-getPreloadFragment = function() {
-	return preloadFragment;
-};
-
-/**
-  * Set the preload fragment
-  *
-  * @param newPreloadFragment {String} the new preload fragment
-  */
-setPreloadFragment = function( newPreloadFragment ) {
-	preloadFragment = newPreloadFragment;
-};
-
-beforeEach(function() {
-	/**
-	 * Reset state
-	 **/
-	setFragment("");
-});
-
 afterEach(function() {
-	setFragment("");
 	runs(function() {
-		preloadFragment = "";
+		document.location.hash = "";
 	});
 });
 
