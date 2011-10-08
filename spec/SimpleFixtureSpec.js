@@ -1,7 +1,7 @@
 describe('pseudositer', function() {
 	var $elem,
-	pseudoPath = 'fixtures/simple/',
-	realPath = getIndexPath() +'/'+ pseudoPath;
+	path = 'fixtures/simple/',
+	realPath = getIndexPath() +'/'+ path;
 
 	/**
 	 * Load fixtures.
@@ -16,17 +16,43 @@ describe('pseudositer', function() {
 			$elem.data('pseudositer').destroy();
 		});
 	});
-	
+
     describe('when the page is reloaded', function() {
 
 		it('should send loading event', function() {
 			spyOnEvent($elem, 'loading.pseudositer')
 			runs(function() {
-				$elem.pseudositer( pseudoPath );
+				$elem.pseudositer( path );
 			});
 			waitForPseudositer($elem);
 			runs(function() {
 				expect('loading.pseudositer').toHaveBeenTriggeredOn($elem);
+			});
+		});
+		
+		describe('if the path is relative with ".."', function() {
+			it('should still find the content', function() {
+				spyOnEvent($elem, 'loaded.pseudositer')
+				runs(function() {
+					$elem.pseudositer( '../pseudositer/' + path );
+				});
+				waitForPseudositer( $elem );
+				runs(function() {
+					expect('loaded.pseudositer').toHaveBeenTriggeredOn($elem);
+				});
+			});
+		});
+		
+		describe('if the path is absolute', function() {
+			it('should still find the content', function() {
+				spyOnEvent($elem, 'loaded.pseudositer')
+				runs(function() {
+					$elem.pseudositer( realPath );
+				});
+				waitForPseudositer( $elem );
+				runs(function() {
+					expect('loaded.pseudositer').toHaveBeenTriggeredOn($elem);
+				});
 			});
 		});
 		
@@ -35,7 +61,7 @@ describe('pseudositer', function() {
 			it('should send loaded event', function() {
 				spyOnEvent($elem, 'loaded.pseudositer')
 				runs(function() {
-					$elem.pseudositer( pseudoPath );
+					$elem.pseudositer( path );
 				});
 				waitForPseudositer($elem);
 				runs(function() {
@@ -47,12 +73,12 @@ describe('pseudositer', function() {
 				throw 'not yet implemented';
 			});
 		});
-		
+
 		describe('if state is root', function() {
 
 			it('should replace the state with that of the deepest earliest alphabetized content', function() {
 				runs(function() {
-					$elem.pseudositer( pseudoPath );
+					$elem.pseudositer( path );
 				});
 				waitForPseudositer( $elem );
 				runs(function() {
@@ -68,7 +94,7 @@ describe('pseudositer', function() {
 				it('should display the links of that directory', function() {
 					document.location.hash = "/directory/";
 					runs(function() {
-						$elem.pseudositer( pseudoPath );
+						$elem.pseudositer( path );
 					});
 					waitForPseudositer( $elem );
 					runs(function() {
@@ -80,7 +106,7 @@ describe('pseudositer', function() {
 				it('should replace the state with that of the deepest earliest alphabetized content', function() {
 					document.location.hash = "/directory/";
 					runs(function() {
-						$elem.pseudositer( pseudoPath );
+						$elem.pseudositer( path );
 					});
 					waitForPseudositer( $elem );
 					runs(function() {
@@ -91,7 +117,7 @@ describe('pseudositer', function() {
 				it('should load the deepest earliest alphabetized content in that directory', function() {
 					document.location.hash = "/directory/";
 					runs(function() {
-						$elem.pseudositer( pseudoPath );
+						$elem.pseudositer( path );
 					});
 					waitForPseudositer( $elem );
 					runs(function() {
@@ -105,7 +131,7 @@ describe('pseudositer', function() {
 				it('should not display the link to the file', function() {
 					document.location.hash = "/hello world.txt";
 					runs(function() {
-						$elem.pseudositer( pseudoPath );
+						$elem.pseudositer( path );
 					});
 					waitForPseudositer( $elem );
 					runs(function() {
@@ -116,7 +142,7 @@ describe('pseudositer', function() {
 				it('should display all the links in directories containing that file', function() {
 					document.location.hash = "/hello world.txt";
 					runs(function() {
-						$elem.pseudositer( pseudoPath );
+						$elem.pseudositer( path );
 					});
 					waitForPseudositer( $elem );
 					runs(function() {
@@ -130,7 +156,7 @@ describe('pseudositer', function() {
 					xit('should strip the file type from the state', function() {
 						document.location.hash = "/hello world.txt";
 						runs(function() {
-							$elem.pseudositer( pseudoPath );
+							$elem.pseudositer( path );
 						});
 						waitForPseudositer( $elem );
 						runs(function() {
@@ -145,7 +171,7 @@ describe('pseudositer', function() {
 						document.location.hash = "/hello world";
 
 						runs(function() {
-							$elem.pseudositer( pseudoPath );
+							$elem.pseudositer( path );
 						});
 						waitForPseudositer( $elem );
 						runs(function() {
@@ -159,7 +185,7 @@ describe('pseudositer', function() {
 					it('should load the text file content', function() {
 						document.location.hash = "/hello world.txt";
 						runs(function() {
-							$elem.pseudositer( pseudoPath );
+							$elem.pseudositer( path );
 						});
 						waitForPseudositer( $elem );
 						runs(function() {
@@ -174,7 +200,7 @@ describe('pseudositer', function() {
 					it('should create the image element', function() {
 						document.location.hash = "/tree.png";
 						runs(function() {
-							$elem.pseudositer( pseudoPath );
+							$elem.pseudositer( path );
 						});
 						waitForPseudositer( $elem );
 						runs(function() {
@@ -186,7 +212,7 @@ describe('pseudositer', function() {
 					it('should link to the original image', function() {
 						document.location.hash = "/tree.png";
 						runs(function() {
-							$elem.pseudositer( pseudoPath );
+							$elem.pseudositer( path );
 						});
 						waitForPseudositer( $elem );
 						runs(function() {
@@ -205,7 +231,7 @@ describe('pseudositer', function() {
 					document.location.hash = garbage;
 
 					runs(function() {
-						$elem.pseudositer( pseudoPath );
+						$elem.pseudositer( path );
 					});
 					waitForPseudositer( $elem );
 					runs(function() {
@@ -216,7 +242,7 @@ describe('pseudositer', function() {
 				it('should not modify the state', function() {
 					document.location.hash = garbage;
 					runs(function() {
-						$elem.pseudositer( pseudoPath );
+						$elem.pseudositer( path );
 					});
 					waitForPseudositer( $elem );
 					runs(function() {
