@@ -44,7 +44,7 @@
       #
     */
     var contentClass, createIndex, destroyIndex, errorClass, events, getClassForPath, getContentContainer, getCurrentFragment, getCurrentPath, getIndexClassForLevel, getIndexTrail, getSuffix, hideContent, hideError, hideLoadingNotice, indexClass, linkClass, loadImage, loadText, loadingClass, log, showContent, showError, showLoadingNotice, staleClass;
-    events = ['update', 'startLoading', 'failedLoading', 'doneLoading', 'alwaysLoading', 'destroyIndex', 'createIndex', 'loadImage', 'loadText', 'hideContent', 'showContent', 'showError'];
+    events = ['update.pseudositer', 'start.loading.pseudositer', 'failed.loading.pseudositer', 'done.loading.pseudositer', 'always.loading.pseudositer', 'destroy.index.pseudositer', 'create.index.pseudositer', 'load.image.pseudositer', 'load.text.pseudositer', 'hide.content.pseudositer', 'show.content.pseudositer', 'show.error.pseudositer'];
     /*
       #
       # Static class names for default handlers
@@ -117,7 +117,6 @@
     */
     showLoadingNotice = function(spawningPath) {
       var $container, $loadingNotice, classForPath;
-      log("showLoadingNotice( " + spawningPath + " )");
       $container = getContentContainer(this);
       classForPath = getClassForPath(spawningPath);
       $loadingNotice = $('<div />').hide().text("Loading " + spawningPath + "...").addClass("" + loadingClass + " " + classForPath).appendTo($container).fadeIn('fast');
@@ -125,7 +124,6 @@
     };
     hideLoadingNotice = function(spawningPath) {
       var $elem, classForPath;
-      log("hideLoadingNotice( " + spawningPath + " )");
       classForPath = getClassForPath(spawningPath);
       $elem = $("." + loadingClass + "." + classForPath).fadeOut('fast', function() {
         return $elem.remove();
@@ -134,7 +132,6 @@
     };
     destroyIndex = function(dfd, aboveIndexLevel) {
       var $index, $indices, destroyed, _i, _len;
-      log("destroyIndex( " + dfd + ", " + aboveIndexLevel + " )");
       $indices = $('.' + indexClass);
       destroyed = new $.Deferred().resolve();
       for (_i = 0, _len = $indices.length; _i < _len; _i++) {
@@ -155,7 +152,6 @@
     };
     createIndex = function(dfd, path, $links) {
       var $index, indexLevel, levelClass, prevPath;
-      log("createIndex( " + dfd + ", " + path + ", " + $links + " )");
       indexLevel = path.split('/').length - 2;
       levelClass = getIndexClassForLevel(indexLevel);
       $index = $('.' + levelClass);
@@ -203,7 +199,6 @@
     };
     hideContent = function(dfd, $elem) {
       var $content;
-      log("hideContent( " + dfd + ", " + $elem + " )");
       $content = getContentContainer(this).children();
       $content.fadeOut('slow', function() {
         $content.remove();
@@ -213,7 +208,6 @@
     };
     showContent = function(dfd, $elem) {
       var $container;
-      log("showContent( " + dfd + ", " + $elem + " )");
       $container = getContentContainer(this);
       $elem.hide().appendTo($container).fadeIn('slow', function() {
         return dfd.resolve();
@@ -233,7 +227,6 @@
     };
     hideError = function() {
       var $error;
-      log("hideError( )");
       $error = $('.' + errorClass);
       $error.fadeOut('fast', function() {
         return $error.text('');
@@ -280,12 +273,10 @@
           _ref = _this.options[event];
           for (_j = 0, _len2 = _ref.length; _j < _len2; _j++) {
             handler = _ref[_j];
-            log("binding " + handler + " to " + event + ".pseudositer");
-            _this.$el.bind("" + event + ".pseudositer", function() {
+            _this.$el.bind(event, function() {
               var args;
               args = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
-              handler.apply(_this.$el, args);
-              return false;
+              return handler.apply(_this.$el, args);
             });
           }
         }
@@ -310,12 +301,10 @@
       trigger = function() {
         var args, eventName;
         eventName = arguments[0], args = 2 <= arguments.length ? __slice.call(arguments, 1) : [];
-        log("trigger( " + eventName + ".pseudositer, " + args + " )");
         _this.$el.triggerHandler("" + eventName + ".pseudositer", args);
         return _this;
       };
       getAjaxPath = function(path) {
-        log("getAjaxPath( " + path + " )");
         return _this.realPath + path.substr(1);
       };
       update = function() {
@@ -326,16 +315,17 @@
           document.location.hash = '/';
           return;
         }
+        trigger('update', path);
         $content = _this.cachedContent[path];
         if ($content != null) {
           showIndices(path);
           contentShown = new $.Deferred();
           contentHidden = new $.Deferred();
-          trigger('hideContent', contentHidden);
+          trigger('hide.content', contentHidden);
           contentHidden.done(function() {
-            return trigger('showContent', contentShown, $content);
+            return trigger('show.content', contentShown, $content);
           }).fail(function(errObj) {
-            return trigger('showError', errObj);
+            return trigger('show.error', errObj);
           });
         } else {
           load(path).done(function() {
@@ -345,7 +335,7 @@
               return document.location.hash = loadedPath;
             }
           }).fail(function(errObj) {
-            return trigger('showError', errObj);
+            return trigger('show.error', errObj);
           });
         }
         return _this;
@@ -353,7 +343,7 @@
       load = function(spawningPath) {
         var pathDfd, progress;
         log("load( " + spawningPath + " )");
-        trigger('startLoading', spawningPath);
+        trigger('start.loading', spawningPath);
         if (_this.options.recursion === true) {
           pathDfd = unfold(spawningPath);
         } else {
@@ -378,9 +368,9 @@
             });
           }
           return dfd.done(function() {
-            return progress.resolve(path);
-          }).fail(function(errObj) {
-            return progress.reject(errObj);
+            return progress.resolve(path).fail(function(errObj) {
+              return progress.reject(errObj);
+            });
           });
         }).fail(function(errObj) {
           return progress.reject(errObj);
@@ -389,11 +379,11 @@
           return progress.reject("Timeout after " + _this.options.timeout + " ms");
         }), _this.options.timeout);
         progress.done(function(loadedPath) {
-          return trigger('doneLoading', spawningPath, loadedPath);
+          return trigger('done.loading', spawningPath, loadedPath);
         }).fail(function(errObj) {
-          return trigger('failedLoading', spawningPath);
+          return trigger('failed.loading', spawningPath);
         }).always(function() {
-          return trigger('alwaysLoading', spawningPath);
+          return trigger('always.loading', spawningPath);
         });
         return progress.promise();
       };
@@ -464,13 +454,13 @@
         var $links, dfd, trails, _i, _len;
         log("showIndices( " + path + " )");
         dfd = new $.Deferred();
-        trigger('destroyIndex', dfd, trails.length);
+        trigger('destroy.index', dfd, trails.length);
         trails = getIndexTrail(path);
         $links = _this.pathIndices([path]);
         for (_i = 0, _len = trails.length; _i < _len; _i++) {
           path = trails[_i];
           dfd = dfd.pipe(function() {
-            return trigger('createIndex', dfd, $links);
+            return trigger('create.index', dfd, $links);
           });
         }
         return dfd.promise();
@@ -479,28 +469,28 @@
     };
     $.pseudositer.defaultOptions = {
       linkSelector: 'a:not([href^="?"],[href^="/"])',
-      'update': [hideError],
-      'startLoading': [showLoadingNotice],
-      'failedLoading': [],
-      'doneLoading': [],
-      'alwaysLoading': [hideLoadingNotice],
-      'destroyIndex': [destroyIndex],
-      'createIndex': [createIndex],
-      'loadImage': [loadImage],
-      'loadText': [loadText],
-      'hideContent': [hideContent],
-      'showContent': [showContent],
-      'showError': [showError],
+      'update.pseudositer': [hideError],
+      'start.loading.pseudositer': [showLoadingNotice],
+      'failed.loading.pseudositer': [],
+      'done.loading.pseudositer': [],
+      'always.loading.pseudositer': [hideLoadingNotice],
+      'destroy.index.pseudositer': [destroyIndex],
+      'create.index.pseudositer': [createIndex],
+      'load.image.pseudositer': [loadImage],
+      'load.text.pseudositer': [loadText],
+      'hide.content.pseudositer': [hideContent],
+      'show.content.pseudositer': [showContent],
+      'show.error.pseudositer': [showError],
       timeout: 2000,
       recursion: true
     };
     $.pseudositer.defaultMap = {
-      png: 'loadImage',
-      gif: 'loadImage',
-      jpg: 'loadImage',
-      jpeg: 'loadImage',
-      txt: 'loadText',
-      html: 'loadText'
+      png: 'load.image',
+      gif: 'load.image',
+      jpg: 'load.image',
+      jpeg: 'load.image',
+      txt: 'load.text',
+      html: 'load.text'
     };
     $.fn.pseudositer = function(hiddenPath, options, map) {
       if (map == null) map = {};
