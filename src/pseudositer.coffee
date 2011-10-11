@@ -71,6 +71,7 @@ and the paths to your javascript libraries as appropriate:
   contentClass = 'pseudositer-content'
   staleClass   = 'pseudositer-stale'
   indexClass   = 'pseudositer-index'
+  indexContainerClass = 'pseudositer-index-container'
   loadingClass = 'pseudositer-loading'
   errorClass   = 'pseudositer-error'
   linkClass    = 'pseudositer-link'
@@ -173,8 +174,22 @@ and the paths to your javascript libraries as appropriate:
   getContentContainer = ( $pseudositer ) ->
     # Find a container if we have one, create one otherwise.
     $container = $('.' + contentClass)
-    if( $container.length == 0 )
+    if $container.length is 0
       $container = $('<div />').addClass( contentClass ).appendTo( $pseudositer )
+
+    $container
+
+  # Retrieve the index container for a pseudositer element. Creates it if
+  # it does not exist yet
+  #
+  # $pseudositer the pseudositer element
+  #
+  # @return {DOM} element for content
+  getIndexContainer = ( $pseudositer ) ->
+    # Find a container if we have one, create one otherwise.
+    $container = $('.' + indexContainerClass )
+    if $container.length is 0
+      $container = $('<div />').addClass( indexContainerClass ).prependTo( $pseudositer )
 
     $container
 
@@ -286,7 +301,7 @@ and the paths to your javascript libraries as appropriate:
         .addClass( indexClass + ' ' + levelClass )
         .data( 'pseudositer', { } )
         .hide()
-      this.append $index
+      getIndexContainer( this ).append $index
 
     # If the previous path is the same, leave the element alone
     # and resolve immediately.
