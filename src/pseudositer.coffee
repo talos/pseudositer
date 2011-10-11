@@ -42,25 +42,25 @@ and the paths to your javascript libraries as appropriate:
   ###
 
   events = [
-    'update'         # ( spawningPath )
+    'update'        # ( evt, spawningPath )
 
-    'startLoading'  # ( spawningPath )
-    'failedLoading' # ( spawningPath )
-    'doneLoading'   # ( spawningPath, loadedPath )
-    'alwaysLoading' # ( spawningPath )
+    'startLoading'  # ( evt, spawningPath )
+    'failedLoading' # ( evt, spawningPath )
+    'doneLoading'   # ( evt, spawningPath, loadedPath )
+    'alwaysLoading' # ( evt, spawningPath )
 
-    'destroyIndex' # ( dfd, aboveIndexLevel )
-    'createIndex'  # ( dfd, path, $links )
+    'destroyIndex' # ( evt, dfd, aboveIndexLevel )
+    'createIndex'  # ( evt, dfd, path, $links )
 
-    'loadImage'    # ( dfd($elem), pathToImage )
-    'loadText'     # ( dfd($elem), pathToText )
-    'loadHtml'     # ( dfd($elem), pathToHtml )
-    'loadDefault'  # ( dfd($elem), pathToFile )
-    'hideContent'  # ( dfd )
-    'showContent'  # ( dfd, $content )
-    'showError'    # ( errObj )
+    'loadImage'    # ( evt, dfd($elem), pathToImage )
+    'loadText'     # ( evt, dfd($elem), pathToText )
+    'loadHtml'     # ( evt, dfd($elem), pathToHtml )
+    'loadDefault'  # ( evt, dfd($elem), pathToFile )
+    'hideContent'  # ( evt, dfd )
+    'showContent'  # ( evt, dfd, $content )
+    'showError'    # ( evt, errObj )
 
-    'destroy'      # ( )
+    'destroy'      # ( evt )
   ]
 
   ###
@@ -220,8 +220,9 @@ and the paths to your javascript libraries as appropriate:
 
   # Show the default loading notice
   #
+  # @param evt the event that called this handler.
   # @param spawningPath the path that caused the loading
-  showLoadingNotice = ( spawningPath ) ->
+  showLoadingNotice = ( evt, spawningPath ) ->
     log "showLoadingNotice( #{spawningPath} )"
 
     # $container = getContentContainer this
@@ -238,9 +239,10 @@ and the paths to your javascript libraries as appropriate:
 
   # Hide the default loading notice
   #
+  # @param evt the event that called this handler.
   # @param spawningPath the path that caused the loading.  If not specified,
   # removes all loading notices.
-  hideLoadingNotice = ( spawningPath ) ->
+  hideLoadingNotice = ( evt, spawningPath ) ->
     log "hideLoadingNotice( #{spawningPath} )"
 
     if spawningPath?
@@ -256,10 +258,11 @@ and the paths to your javascript libraries as appropriate:
 
   # Destroy index elements that are at a deeper level than the new view.
   #
+  # @param evt the event that called this handler.
   # @param dfd A {Deferred} to resolve when the indices are destroyed
   # @param aboveIndexLevel the {int} level above which indices should be
   # destroyed
-  destroyIndex = ( dfd, aboveIndexLevel ) ->
+  destroyIndex = ( evt, dfd, aboveIndexLevel ) ->
     log "destroyIndex( #{dfd}, #{aboveIndexLevel} )"
 
     # pipe each destruction onto this
@@ -285,10 +288,11 @@ and the paths to your javascript libraries as appropriate:
 
   # Create an index element to hold links if it does not already exist.
   #
+  # @param evt the event that called this handler.
   # @param dfd A {Deferred} to resolve when the index is drawn
   # @param path the path to the index
   # @param $links an array of {DOM} links
-  createIndex = ( dfd, path, $links ) ->
+  createIndex = ( evt, dfd, path, $links ) ->
     log "createIndex( #{dfd}, #{path}, #{$links} )"
     indexLevel = path.split( '/' ).length - 2
 
@@ -321,9 +325,10 @@ and the paths to your javascript libraries as appropriate:
 
   # Populate $elem with an image element wrapped in a link to the image
   #
+  # @param evt the event that called this handler.
   # @param dfd A {Deferred} to resolve with the image when it is loaded
   # @param pathToImage the path to the image
-  loadImage = ( dfd, pathToImage ) ->
+  loadImage = ( evt, dfd, pathToImage ) ->
     log "loadImage( #{dfd}, #{pathToImage} )"
 
     # temp div to force-load image
@@ -346,9 +351,10 @@ and the paths to your javascript libraries as appropriate:
 
   # Populate $elem with text from a file inside <pre>.
   #
+  # @param evt the event that called this handler.
   # @param dfd A {Deferred} to resolve with a div with the text when loaded.
   # @param pathToText the path to the text file
-  loadText = ( dfd, pathToText ) ->
+  loadText = ( evt, dfd, pathToText ) ->
     log "loadText( #{dfd}, #{pathToText} )"
 
     $.get( pathToText )
@@ -360,9 +366,10 @@ and the paths to your javascript libraries as appropriate:
   # Populate $elem with html from an HTML file's <body> if it has such a tag,
   # the entirety of the HTML otherwise.
   #
+  # @param evt the event that called this handler.
   # @param dfd A {Deferred} to resolve with the HTML when loaded.
   # @param pathToHtml the path to the html file
-  loadHtml = ( dfd, pathToHtml ) ->
+  loadHtml = ( evt, dfd, pathToHtml ) ->
     log "loadHtml( #{dfd}, #{pathToHtml} )"
 
     $.get( pathToHtml )
@@ -373,8 +380,9 @@ and the paths to your javascript libraries as appropriate:
 
   # Hide existing content
   #
+  # @param evt the event that called this handler.
   # @param dfd the {Deferred} to resolve when the element is hidden
-  hideContent = ( dfd ) ->
+  hideContent = ( evt, dfd ) ->
     log "hideContent( #{dfd} )"
     # content is all the children of the content container
     $content = getContentContainer( this ).children()
@@ -391,9 +399,10 @@ and the paths to your javascript libraries as appropriate:
 
   # Display an element within content
   #
+  # @param evt the event that called this handler.
   # @param dfd the {Deferred} to resolve when the element is shown
   # @param $elem the element to display
-  showContent = ( dfd, $elem ) ->
+  showContent = ( evt, dfd, $elem ) ->
     log "showContent( #{dfd}, #{$elem} )"
     $container = getContentContainer( this )
     # hide the element, append it to container
@@ -404,8 +413,9 @@ and the paths to your javascript libraries as appropriate:
 
   # Display an error message
   #
+  # @param evt the event that called this handler.
   # @param errObj the error object
-  showError = ( errObj ) ->
+  showError = ( evt, errObj ) ->
     log "showError( #{errObj} )"
     log errObj
 
@@ -420,7 +430,9 @@ and the paths to your javascript libraries as appropriate:
     undefined
 
   # Remove the current error message
-  hideError = () ->
+  #
+  # @param evt the event that called this handler.
+  hideError = ( evt ) ->
     log "hideError( )"
     $error = $( '.' + errorClass )
 
@@ -479,9 +491,10 @@ and the paths to your javascript libraries as appropriate:
       # Set up handlers
       for event in events
         for handler in @options[ event ]
-          @$el.bind "#{event}.pseudositer", handler: handler, ( evt, args... ) =>
+          @$el.bind "#{event}.pseudositer", handler: handler, ( args... ) =>
             # have to pass handler through event data, otherwise we keep binding
             # the last handler in the map
+            evt = args[ 0 ]
             evt.data.handler.apply( @$el, args )
             false
 
