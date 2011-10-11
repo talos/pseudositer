@@ -82,8 +82,15 @@ var getRealPath = function( pseudoPath ) {
   * Load fixtures before each run.
   **/
 beforeEach(function() {
-	setFixtures( $( '<div />' ).attr( 'id', 'pseudositer' ) );
-	$elem = $('#pseudositer');
+	// Ensure that prior pseudositer is gone first.
+	waitsFor(function() {
+		return typeof $elem.data( 'pseudositer' ) === 'undefined' || $elem.data( 'pseudositer' ) === null;
+	}, 3000, 'Pseudositer stuck around after last test finished');
+
+	runs(function() {
+		setFixtures( $( '<div />' ).attr( 'id', 'pseudositer' ) );
+		$elem = $('#pseudositer');
+	});
 });
 
 /**

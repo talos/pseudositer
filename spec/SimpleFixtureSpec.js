@@ -1,13 +1,13 @@
 describe('pseudopath "fixtures/simple/"', function() {
-	//beforeEach(function() {
+	beforeEach(function() {
 		pseudoPath = 'fixtures/simple/';
-//});
+	});
 
     describe('when the page is reloaded', function() {
 
 		it('should send loading event', function() {
-			spyOnEvent($elem, 'startLoading.pseudositer')
 			runs(function() {
+				spyOnEvent($elem, 'startLoading.pseudositer');
 				$elem.pseudositer( pseudoPath );
 			});
 			waitForPseudositer($elem);
@@ -18,8 +18,8 @@ describe('pseudopath "fixtures/simple/"', function() {
 		
 		describe('if the pseudoPath is relative with ".."', function() {
 			it('should still find the content', function() {
-				spyOnEvent($elem, 'doneLoading.pseudositer')
 				runs(function() {
+					spyOnEvent($elem, 'doneLoading.pseudositer');
 					$elem.pseudositer( '../pseudositer/' + pseudoPath );
 				});
 				waitForPseudositer( $elem );
@@ -31,8 +31,8 @@ describe('pseudopath "fixtures/simple/"', function() {
 		
 		describe('if the pseudoPath is absolute', function() {
 			it('should still find the content', function() {
-				spyOnEvent($elem, 'doneLoading.pseudositer')
 				runs(function() {
+					spyOnEvent($elem, 'doneLoading.pseudositer');
 					$elem.pseudositer( getRealPath( pseudoPath ) );
 				});
 				waitForPseudositer( $elem );
@@ -45,8 +45,8 @@ describe('pseudopath "fixtures/simple/"', function() {
 		describe('when the content is finished loading', function() {
 
 			it('should send loaded event', function() {
-				spyOnEvent($elem, 'doneLoading.pseudositer')
 				runs(function() {
+					spyOnEvent($elem, 'doneLoading.pseudositer');
 					$elem.pseudositer( pseudoPath );
 				});
 				waitForPseudositer($elem);

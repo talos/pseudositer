@@ -3,7 +3,7 @@ describe('pseudopath "fixtures/deep/"', function() {
 		pseudoPath = 'fixtures/deep/';
 	});
 
-	describe('when recursion is on', function() {
+	describe('if recursion is true', function() {
 		it('should delve to deepest level', function() {
 			runs(function() {
 				$elem.pseudositer( pseudoPath, { recursion: true } );
@@ -15,7 +15,7 @@ describe('pseudopath "fixtures/deep/"', function() {
 		});
 	});
 
-	describe('when recursion is off', function() {
+	describe('if recursion is false', function() {
 		it('should remain at the root level', function() {
 			runs(function() {
 				$elem.pseudositer( pseudoPath, { recursion: false } );
