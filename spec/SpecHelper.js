@@ -86,7 +86,7 @@ beforeEach(function() {
 	waitsFor(function() {
 		return typeof $elem.data( 'pseudositer' ) === 'undefined' || $elem.data( 'pseudositer' ) === null;
 	}, 3000, 'Pseudositer stuck around after last test finished');
-
+	
 	runs(function() {
 		setFixtures( $( '<div />' ).attr( 'id', 'pseudositer' ) );
 		$elem = $('#pseudositer');
