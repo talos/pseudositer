@@ -810,7 +810,7 @@ and the paths to your javascript libraries as appropriate:
   # default options
   $.pseudositer.defaultOptions =
 
-    linkSelector   : 'a:not([href^="?"],[href^="/"],[href^="."])' # Find relative links from an index page that go deeper
+    linkSelector   : 'a:not([href^="?"],[href^="/"],[href^="../"])' # Find relative links from an index page that go deeper
 
     # default handlers
     update         : [ hideError ]
