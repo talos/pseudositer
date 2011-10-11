@@ -54,9 +54,13 @@ and the paths to your javascript libraries as appropriate:
 
     'loadImage'    # ( dfd($elem), pathToImage )
     'loadText'     # ( dfd($elem), pathToText )
+    'loadHtml'     # ( dfd($elem), pathToHtml )
+    'loadDefault'  # ( dfd($elem), pathToFile )
     'hideContent'  # ( dfd )
     'showContent'  # ( dfd, $content )
     'showError'    # ( errObj )
+
+    'destroy'      # ( )
   ]
 
   ###
@@ -125,6 +129,25 @@ and the paths to your javascript libraries as appropriate:
 
     trail
 
+  # Determine how many levels deep an absolute path is
+  #
+  # @param path the {String} absolute path to check
+  #
+  # @return {int} how many levels deep the path is
+  getPathDepth = ( path ) ->
+
+    path.split( '/' ).length - 2
+
+  # Determine whether a path points to a file or a directory.
+  #
+  # @param path the {String} path to investigate
+  #
+  # @return {boolean} True if the path is a file, False otherwise.
+  isPathToFile = ( path ) ->
+    log "isPathToFile( #{path} )"
+
+    if path.charAt( path.length - 1 ) isnt '/' then true else false
+
   # Obtain the lowercase file type suffix (after a period)
   #
   # @param path the path to the file
@@ -186,28 +209,33 @@ and the paths to your javascript libraries as appropriate:
   showLoadingNotice = ( spawningPath ) ->
     log "showLoadingNotice( #{spawningPath} )"
 
-    $container = getContentContainer this
+    # $container = getContentContainer this
     classForPath = getClassForPath spawningPath
 
     # Loading notice fades in, is linked to spawning path
     $loadingNotice = $( '<div />' ).hide()
       .text( "Loading #{spawningPath}..." )
       .addClass( "#{loadingClass} #{classForPath}" )
-      .appendTo( $container )
+      .appendTo( this )
       .fadeIn( 'fast' )
 
     undefined
 
   # Hide the default loading notice
   #
-  # @param spawningPath the path that caused the loading
+  # @param spawningPath the path that caused the loading.  If not specified,
+  # removes all loading notices.
   hideLoadingNotice = ( spawningPath ) ->
     log "hideLoadingNotice( #{spawningPath} )"
 
-    classForPath = getClassForPath spawningPath
+    if spawningPath?
+      classForPath = getClassForPath spawningPath
+      $elem = $(".#{loadingClass}.#{classForPath}")
+    else
+      $elem = $(".#{loadingClass}");
+
     # fade out notice, then remove
-    $elem = $(".#{loadingClass}.#{classForPath}")
-      .fadeOut 'fast', -> $elem.remove()
+    $elem.fadeOut 'fast', -> $elem.remove()
 
     undefined
 
@@ -219,17 +247,21 @@ and the paths to your javascript libraries as appropriate:
   destroyIndex = ( dfd, aboveIndexLevel ) ->
     log "destroyIndex( #{dfd}, #{aboveIndexLevel} )"
 
-    $indices = $( '.' + indexClass )
     # pipe each destruction onto this
     destroyed = new $.Deferred().resolve()
+
     # look through all of the indices, remove those with levels above
-    for $index in $indices
+    # aboveIndexLevel
+    $( '.' + indexClass ).each ( idx, elem ) ->
+      $index = $ elem
       if $index.data( 'pseudositer' ).level > aboveIndexLevel
-        # destroy the next level after the previous is done each time
-        destroyed = destroyed.pipe ->
-          $index.fadeOut 'slow', ->
+        # Deferred for a single level
+        idxDestroy = new $.Deferred ( idxDestroy ) ->
+          $index.fadeOut 'slow', () ->
             $index.remove()
-            destroyed.resolve()
+            idxDestroy.resolve()
+
+        destroyed = destroyed.pipe idxDestroy
 
     # when all destroying is done, resolve the original deferred.
     destroyed.done( () -> dfd.resolve() )
@@ -264,11 +296,11 @@ and the paths to your javascript libraries as appropriate:
       dfd.resolve()
     else # otherwise, change the path, empty, and append new links, then resolve
       # fade out old index, slowly, then insert new one
-      $index.data 'pseudositer', fadeOut 'slow', ->
+      $index.fadeOut 'slow', ->
         $index.empty()
           .data( 'pseudositer', path : path, level : indexLevel )
-          .append $links
-          .fadeIn 'slow', -> dfd.resolve()
+          .append( $links )
+          .fadeIn( 'slow', -> dfd.resolve() )
 
     undefined
 
@@ -277,11 +309,11 @@ and the paths to your javascript libraries as appropriate:
   # @param dfd A {Deferred} to resolve with the image when it is loaded
   # @param pathToImage the path to the image
   loadImage = ( dfd, pathToImage ) ->
-    log "loadImage( #{dfd}, #{$elem}, #{pathToImage} )"
+    log "loadImage( #{dfd}, #{pathToImage} )"
 
     # temp div to force-load image
     $tmp = $( '<div />' )
-      .style( height: '0px', width: '0px' )
+      .css( height: '0px', width: '0px' )
       .appendTo $( 'body' )
 
     # create the image wrapped in link
@@ -289,38 +321,56 @@ and the paths to your javascript libraries as appropriate:
           $( '<img />' )
           .attr( 'src', pathToImage )
           # only resolve deferred upon loading, and destroy $tmp at that point too
-          .bind( 'onload', ->
+          #.bind( 'onload', ->
+          .bind( 'load', ->
             dfd.resolve( $img )
             $tmp.remove()
           ) )
 
     undefined
 
-  # Populate $elem with text from a file.
+  # Populate $elem with text from a file inside <pre>.
   #
   # @param dfd A {Deferred} to resolve with a div with the text when loaded.
   # @param pathToText the path to the text file
   loadText = ( dfd, pathToText ) ->
-    log "loadText( #{$elem}, #{pathToText} )"
+    log "loadText( #{dfd}, #{pathToText} )"
 
-    dfd = new $.Deferred()
     $.get( pathToText )
-      .done( ( responseText ) -> dfd.resolve $( '<div />' ).text responseText )
-      .fail( ( errObj )       -> dfd.reject  errObj )
+      .done( ( responseText ) -> dfd.resolve $( '<div />' ).append($('<pre />').text responseText ) )
+      .fail( ( errObj )       -> dfd.reject  errObj.statusText )
+
+    undefined
+
+  # Populate $elem with html from an HTML file's <body> if it has such a tag,
+  # the entirety of the HTML otherwise.
+  #
+  # @param dfd A {Deferred} to resolve with the HTML when loaded.
+  # @param pathToHtml the path to the html file
+  loadHtml = ( dfd, pathToHtml ) ->
+    log "loadHtml( #{dfd}, #{pathToHtml} )"
+
+    $.get( pathToHtml )
+      .done( ( responseText ) -> dfd.resolve $ responseText )
+      .fail( ( errObj )       -> dfd.reject  errObj.statusText )
 
     undefined
 
   # Hide existing content
   #
   # @param dfd the {Deferred} to resolve when the element is hidden
-  hideContent = ( dfd, $elem ) ->
-    log "hideContent( #{dfd}, #{$elem} )"
+  hideContent = ( dfd ) ->
+    log "hideContent( #{dfd} )"
     # content is all the children of the content container
     $content = getContentContainer( this ).children()
 
-    $content.fadeOut 'slow', ->
-      $content.remove()
+    # resolve immediately if there's no content to hide
+    if $content.length is 0
       dfd.resolve()
+    else # wait for content to disappear otherwise.
+      $content.fadeOut 'slow', ->
+        $content.detach()
+        dfd.resolve()
 
     undefined
 
@@ -378,16 +428,15 @@ and the paths to your javascript libraries as appropriate:
     # Add a reverse reference to the DOM object
     @$el.data "pseudositer", @
 
-    # Cache of index elements by path.  Each value is an array of <a> elements.
-    @pathIndices = {}
-
-    # Cache of content by URL.  Each value is an element that can be appended to
-    # $content.
-    @cachedContent = {}
+    # Cache of index pages and contents by path.
+    # Each index page element is an array of <a> elements.
+    # Each content element is DOM that can be appended to a content element.
+    @cache = {}
 
     # Initialization code
     @init = () =>
       @options = $.extend {}, $.pseudositer.defaultOptions, options
+      log @options
       @map     = $.extend {}, $.pseudositer.defaultMap, map
 
       @visiblePath = getCurrentPath()
@@ -415,9 +464,10 @@ and the paths to your javascript libraries as appropriate:
       # Set up handlers
       for event in events
         for handler in @options[ event ]
-          log "binding #{handler} to #{event}.pseudositer"
-          @$el.bind "#{event}.pseudositer", ( args... ) =>
-            handler.apply( @$el, args )
+          @$el.bind "#{event}.pseudositer", handler: handler, ( evt, args... ) =>
+            # have to pass handler through event data, otherwise we keep binding
+            # the last handler in the map
+            evt.data.handler.apply( @$el, args )
             false
 
       # Immediately update view
@@ -437,9 +487,17 @@ and the paths to your javascript libraries as appropriate:
     # @return this
     @destroy = =>
 
-      # Empty out the original element and unbind events
+       # Empty out the original element and unbind events
+      # after sending destroy event
       $( window ).unbind 'hashchange', update
+      trigger 'destroy'
       @$el.empty().unbind '.pseudositer'
+
+      # Remove the data element
+      @$el.removeData 'pseudositer'
+
+      # Reset the page fragment
+      document.location.hash = "";
 
       this
 
@@ -457,7 +515,7 @@ and the paths to your javascript libraries as appropriate:
     #
     # @return this
     trigger = ( eventName, args... ) =>
-      log "trigger( #{eventName}.pseudositer, #{args} )"
+      log "trigger( #{eventName}, #{args} )"
 
       @$el.triggerHandler "#{eventName}.pseudositer", args
       @
@@ -496,31 +554,32 @@ and the paths to your javascript libraries as appropriate:
 
       #trigger 'update', path
 
-      $content = @cachedContent[ path ]
-
-      # if the content is cached, everything is ready to display.
-      if $content?
+      # if the path is cached, we've got everything loaded up for it.
+      if @cache[ path ]?
+        # always show indices
         showIndices path
 
-        contentShown = new $.Deferred()
+        # Hide current content, resolving contentHidden when complete
         contentHidden = new $.Deferred()
-
-        # Start off by hiding the current content, resolving contentHidden
-        # when hidden
         trigger 'hideContent', contentHidden
 
-        # When hide content is done, trigger show content
-        # if there's a failure, make sure alwaysEvent is called.
-        contentHidden
-          .done( () ->
-            trigger 'showContent', contentShown, $content )
-          .fail( ( errObj ) ->
-            trigger 'showError', errObj )
+        # only show content if the path points to content
+        if isPathToFile path
+          $content = @cache[ path ]
+          contentShown = new $.Deferred()
+
+          # When hide content is done, trigger show content
+          # if there's a failure, make sure alwaysEvent is called.
+          contentHidden
+            .done( () ->
+              trigger 'showContent', contentShown, $content )
+            .fail( ( errObj ) ->
+              trigger 'showError', errObj )
 
       else # load the data for the state
         load( path )
           # restart update() from the top when done loading.
-          .done( () ->
+          .done( ( loadedPath ) ->
             if path is loadedPath # force update, changing hash will do nothing
               update()
             else # update will happen due to hash change
@@ -530,32 +589,38 @@ and the paths to your javascript libraries as appropriate:
       this
 
     # Obtain a {Promise} object that, once done, means that
-    # @pathIndices has all the paths leading to the supplied path's content,
-    # and that @cachedContent contains the content.
+    # @cache has all the paths leading to the supplied path's content,
+    # as well as the content (if applicable).
     #
     # @param spawningPath the original path to load
     #
     # @return {Promise} object that, when done, means that
-    # content has been loaded into @cachedContent and that indexes are
-    # cached in @pathIndices.
+    # content and indices have been loaded into @cache
+    # It receives one argument, which
+    # is the pseudopath that was actually loaded.
     load = ( spawningPath ) =>
       log "load( #{spawningPath} )"
 
       trigger 'startLoading', spawningPath
 
       # unfold the path then load if recursion is true
+      log "recursion: #{@options.recursion}"
       if @options.recursion is true
         pathDfd = unfold( spawningPath )
       else # load the path immediately otherwise
-        pathDfd = new $.Deferred( -> spawningPath )
+        pathDfd = new $.Deferred().resolve( spawningPath )
 
       progress = new $.Deferred()
 
       # start loading when the path is available
       pathDfd
         .done( ( path ) ->
-          contentPromise = loadContent path
-          dfd = new $.Deferred().resolve().pipe -> contentPromise
+          dfd = new $.Deferred().resolve()
+
+          # if the path is pointing to a file, then load the file.
+          if isPathToFile path
+            contentPromise = loadContent path
+            dfd = dfd.pipe -> contentPromise
 
           # Make sure that any pre-specified trails are in our cache.
           trails = getIndexTrail path
@@ -599,7 +664,7 @@ and the paths to your javascript libraries as appropriate:
     unfold = ( path, dfd = new $.Deferred() ) =>
       log "unfold( #{path}, #{dfd} )"
 
-      # if path already points to content, resolve the deferred
+      # the path points to content, we can resolve it
       if getSuffix( path )?
         dfd.resolve path
       else
@@ -608,19 +673,21 @@ and the paths to your javascript libraries as appropriate:
         # link and reusing the deferred object
         loadIndex( path )
           .done( () =>
-            $links = @pathIndices[ path ]
+            $links = @cache[ path ]
             if $links.length is 0 # empty index page
               dfd.reject "#{path} has no content"
-            else
-              # the link attr is already hashified
-              unfold $links.first().attr( 'href' ).substr( 1 ), dfd )
+              # dfd.resolve( path )
+            else # the link attr is already hashified
+              unfold $links.first().attr( 'href' ).substr( 1 ), dfd
+
+          )
           .fail( ( errObj ) -> dfd.reject errObj )
 
       dfd.promise()
 
     # If there is no entry for the index,
     # make an ajax request for a path to the index page, and cache
-    # all the links on that index page into @pathIndices.
+    # all the links on that index page into @cache.
     #
     # @param indexPath the path to an index page
     #
@@ -633,7 +700,7 @@ and the paths to your javascript libraries as appropriate:
 
       # if the index is cached, use the links stored there and resolve
       # immediately
-      if @pathIndices[ indexPath ]?
+      if @cache[ indexPath ]?
         dfd.resolve()
 
       # otherwise, load the index and resolve once that's done
@@ -652,7 +719,7 @@ and the paths to your javascript libraries as appropriate:
               else
                 '#' + indexPath + oldValue
 
-          @pathIndices[ indexPath ] = $links
+          @cache[ indexPath ] = $links
         ).done( () -> dfd.resolve() )
          .fail( () -> dfd.reject "Could not load index page for #{indexPath}" )
 
@@ -660,36 +727,31 @@ and the paths to your javascript libraries as appropriate:
 
     # Load the content located at a path
     #
-    # @param pathToContent the path to the content
+    # @param pathToContent the pseudopath to the content
     #
-    # @return {Promise} that resolves when content loaded into @cachedContent.
-    # Will fail if there is no handler for the file suffix or if there is a
-    # problem loading the content.
+    # @return {Promise} that resolves when content loaded into @cache.
+    # Will fail if there is a problem loading the content.
     loadContent = ( pathToContent ) =>
       log "loadContent( #{pathToContent} )"
 
       dfd = new $.Deferred()
       suffix = getSuffix pathToContent
 
-      # if @cachedContent[ pathToContent ]? # resolve immediately if already cached
-      #   dfd.resolve()
-      # Use the handler in @map
-      if @map[ suffix ]?
-        trigger @map[ suffix ], dfd, pathToContent
-        dfd.done( ( $content ) =>
-          # save to @cachedContent upon success
-          @cachedContent[ pathToContent ] = $content
-          # resolve the deferred
-          dfd.resolve() )
-        .fail( ( errObj ) -> dfd.reject errObj )
-      else # log an error if there's no handler
-        dfd.reject "No handler for content type #{suffix}"
+      # Use the handler in @map if we have one, default otherwise
+      handler = if @map[ suffix ]? then @map[ suffix ] else @map[ '' ]
+      trigger handler, dfd, getAjaxPath( pathToContent )
+      dfd.done( ( $content ) =>
+        # save to @cache upon success
+        @cache[ pathToContent ] = $content
+        # resolve the deferred
+        dfd.resolve() )
+      .fail( ( errObj ) -> dfd.reject errObj )
 
       dfd.promise()
 
     # Show the index for an unfolded path, in addition to all its parent
     # index pages. This data should already have been loaded into
-    # @pathIndices .
+    # @cache .
     #
     # @param path the path to show links for
     #
@@ -699,17 +761,21 @@ and the paths to your javascript libraries as appropriate:
 
       # remove any index elements that are deeper than the new path
       dfd = new $.Deferred()
-      trigger 'destroyIndex', dfd, trails.length
+      trigger 'destroyIndex', dfd, getPathDepth path
 
       trails = getIndexTrail path
 
+      # an array of deferreds whose last element will be resolved when
+      # indexes are all created
+      idxDfds = [ dfd ]
       # create indices once the old ones are destroyed, and consecutively
       # by piping deferreds.
-      $links = @pathIndices [ path ]
-      for path in trails
-        dfd = dfd.pipe -> trigger 'createIndex', dfd, $links
+      for trail in trails
+        $links = @cache[ trail ]
+        idxDfds.push( idxDfds[ idxDfds.length - 1]
+          .pipe -> trigger 'createIndex', new $.Deferred(), trail, $links )
 
-      dfd.promise()
+      idxDfds[ idxDfds.length - 1 ].promise()
 
     # call init, and return the output
     @init()
@@ -732,12 +798,15 @@ and the paths to your javascript libraries as appropriate:
 
     'loadImage'   : [ loadImage ]
     'loadText'    : [ loadText ]
+    'loadHtml'    : [ loadHtml ]
+    'loadDefault' : [ loadText ]
     'hideContent' : [ hideContent ]
     'showContent' : [ showContent ]
     'showError'   : [ showError ]
 
+    'destroy'     : [ hideLoadingNotice, hideError ]
 
-    timeout          : 2000
+    timeout          : 10000
     recursion        : true
 
   # Default handler map.  The handlers will be called with a deferred and
@@ -748,7 +817,8 @@ and the paths to your javascript libraries as appropriate:
     jpg : 'loadImage'
     jpeg: 'loadImage'
     txt : 'loadText'
-    html: 'loadText'
+    html: 'loadHtml'
+    ''  : 'loadDefault' # default handler
 
   $.fn.pseudositer = (hiddenPath, options, map = {}) ->
 
