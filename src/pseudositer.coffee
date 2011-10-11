@@ -619,7 +619,6 @@ and the paths to your javascript libraries as appropriate:
       trigger 'startLoading', spawningPath
 
       # unfold the path then load if recursion is true
-      log "recursion: #{@options.recursion}"
       if @options.recursion is true
         pathDfd = unfold( spawningPath )
       else # load the path immediately otherwise
@@ -798,31 +797,31 @@ and the paths to your javascript libraries as appropriate:
   # default options
   $.pseudositer.defaultOptions =
 
-    linkSelector   : 'a:not([href^="?"],[href^="/"])' # Find links from an index page that go deeper
+    linkSelector   : 'a:not([href^="?"],[href^="/"],[href^="."])' # Find relative links from an index page that go deeper
 
     # default handlers
-    'update'         : [ hideError ]
+    update         : [ hideError ]
 
-    'startLoading'  : [ showLoadingNotice ]
-    'failedLoading' : [ ]
-    'doneLoading'   : [ ]
-    'alwaysLoading' : [ hideLoadingNotice ]
+    startLoading  : [ showLoadingNotice ]
+    failedLoading : [ ]
+    doneLoading   : [ ]
+    alwaysLoading : [ hideLoadingNotice ]
 
-    'destroyIndex': [ destroyIndex ]
-    'createIndex' : [ createIndex ]
+    destroyIndex: [ destroyIndex ]
+    createIndex : [ createIndex ]
 
-    'loadImage'   : [ loadImage ]
-    'loadText'    : [ loadText ]
-    'loadHtml'    : [ loadHtml ]
-    'loadDefault' : [ loadText ]
-    'hideContent' : [ hideContent ]
-    'showContent' : [ showContent ]
-    'showError'   : [ showError ]
+    loadImage   : [ loadImage ]
+    loadText    : [ loadText ]
+    loadHtml    : [ loadHtml ]
+    loadDefault : [ loadText ]
+    hideContent : [ hideContent ]
+    showContent : [ showContent ]
+    showError   : [ showError ]
 
-    'destroy'     : [ hideLoadingNotice, hideError ]
+    destroy     : [ hideLoadingNotice, hideError ]
 
-    timeout          : 10000
-    recursion        : true
+    timeout    : 10000
+    recursion  : false
 
   # Default handler map.  The handlers will be called with a deferred and
   # a path to the content with the named extension.
