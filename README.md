@@ -31,6 +31,12 @@ Getting started with Pseudositer is easy. Make sure to include
 
 within your HTML page's `<head>` declaration, modifying the path to the pseudositer and jQuery source if need be.
 
+If you use the above code, make sure to include a tag with the id `pseudositer` somewhere in the page's body:
+
+    <body>
+      <div id="pseudositer" />
+	</body>
+
 Likewise, modify the `path/to/content/index` argument to reflect where your site's content is located.  This will be resolved relative to the HTML page.
 
 - - -

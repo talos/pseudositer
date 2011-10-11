@@ -36,46 +36,61 @@ and the paths to your javascript libraries as appropriate:
 (($) ->
 
   ###
-  # Utility functions
+  #
+  # Static constant events
+  #
   ###
 
-  # Log an object
+  events = [
+    'update'         # ( spawningPath )
+
+    'startLoading'  # ( spawningPath )
+    'failedLoading' # ( spawningPath )
+    'doneLoading'   # ( spawningPath, loadedPath )
+    'alwaysLoading' # ( spawningPath )
+
+    'destroyIndex' # ( dfd, aboveIndexLevel )
+    'createIndex'  # ( dfd, path, $links )
+
+    'loadImage'    # ( dfd($elem), pathToImage )
+    'loadText'     # ( dfd($elem), pathToText )
+    'loadHtml'     # ( dfd($elem), pathToHtml )
+    'loadDefault'  # ( dfd($elem), pathToFile )
+    'hideContent'  # ( dfd )
+    'showContent'  # ( dfd, $content )
+    'showError'    # ( errObj )
+
+    'destroy'      # ( )
+  ]
+
+  ###
+  #
+  # Static class names for default handlers
+  #
+  ###
+  contentClass = 'pseudositer-content'
+  staleClass   = 'pseudositer-stale'
+  indexClass   = 'pseudositer-index'
+  indexContainerClass = 'pseudositer-index-container'
+  loadingClass = 'pseudositer-loading'
+  errorClass   = 'pseudositer-error'
+  linkClass    = 'pseudositer-link'
+
+  ###
+  #
+  # Static functions
+  #
+  ###
+
+  # Log an object.
   #
   # @param obj the {Object} to log
   log = ( obj ) ->
 
-    if console?
-      if console.log?
-        console.log obj
+    if console?.log?
+      console.log obj
 
     undefined
-
-  # Generate an image element wrapped in a link to the image
-  #
-  # @param pathToImage the path to the image
-  #
-  # @return {Promise} that resolves with a single argument that
-  # is an image tag wrapped in a link to the image.
-  loadImage = ( pathToImage ) ->
-    log "loadImage( #{pathToImage} )"
-    $.when(
-         $( '<a />' ).attr( 'href', pathToImage )
-           .append( $( '<img />' ).attr 'src', pathToImage )
-      )
-
-  # Generate a div with text from a text file
-  #
-  # @param pathToText the path to the text file
-  #
-  # @return {Promise} that resolves with a single argument
-  # that is a div tag with the content of the text file
-  loadText = ( pathToText ) ->
-    log "loadText( #{pathToText} )"
-    dfd = new $.Deferred()
-    $.get( pathToText )
-      .done( ( responseText ) -> dfd.resolve $( '<div />' ).text responseText )
-      .fail( ( failObj )      -> dfd.reject  failObj )
-    dfd.promise()
 
   # Get the path of the currently displayed location
   #
@@ -102,6 +117,7 @@ and the paths to your javascript libraries as appropriate:
   #
   # @return {Array} An array of paths to indexes, starting with the most interior
   # index.
+
   getIndexTrail = ( path ) ->
     ary = path.split '/'
 
@@ -114,21 +130,24 @@ and the paths to your javascript libraries as appropriate:
 
     trail
 
-  # Obtain the fragment portion of a URL, or null if there is none
+  # Determine how many levels deep an absolute path is
   #
-  # For example:
-  #   getFragmentFromUrl(/path/without/fragment)     =>  null
-  #   getFragmentFromUrl(/path/with/fragment/#)      =>  ""
-  #   getFragmentFromUrl(/path/with/fragment/##)     =>  "#"
-  #   getFragmentFromUrl(/path/with/fragment/#word)  =>  "word"
+  # @param path the {String} absolute path to check
   #
-  # @param url the url
-  #
-  # @return {String} the fragment, or null if there is none
-  getFragmentFromUrl = ( url ) ->
+  # @return {int} how many levels deep the path is
+  getPathDepth = ( path ) ->
 
-    loc = url.indexOf( '#' )
-    if loc > -1 then url.substr( loc + 1 ) else null
+    path.split( '/' ).length - 2
+
+  # Determine whether a path points to a file or a directory.
+  #
+  # @param path the {String} path to investigate
+  #
+  # @return {boolean} True if the path is a file, False otherwise.
+  isPathToFile = ( path ) ->
+    log "isPathToFile( #{path} )"
+
+    if path.charAt( path.length - 1 ) isnt '/' then true else false
 
   # Obtain the lowercase file type suffix (after a period)
   #
@@ -146,36 +165,299 @@ and the paths to your javascript libraries as appropriate:
     else
       null
 
+  # Retrieve the content container for a pseudositer element. Creates it if
+  # it does not exist yet
+  #
+  # $pseudositer the pseudositer element
+  #
+  # @return {DOM} element for content
+  getContentContainer = ( $pseudositer ) ->
+    # Find a container if we have one, create one otherwise.
+    $container = $('.' + contentClass)
+    if $container.length is 0
+      $container = $('<div />').addClass( contentClass ).appendTo( $pseudositer )
+
+    $container
+
+  # Retrieve the index container for a pseudositer element. Creates it if
+  # it does not exist yet
+  #
+  # $pseudositer the pseudositer element
+  #
+  # @return {DOM} element for content
+  getIndexContainer = ( $pseudositer ) ->
+    # Find a container if we have one, create one otherwise.
+    $container = $('.' + indexContainerClass )
+    if $container.length is 0
+      $container = $('<div />').addClass( indexContainerClass ).prependTo( $pseudositer )
+
+    $container
+
+  # Get the class name for an index of a specified level.
+  #
+  # @param level the {int} level, starting with 0, of the index.
+  #
+  # @return {String} the name of the class
+  getIndexClassForLevel = ( level ) ->
+
+    indexClass + '-' + level
+
+  # Get a safe class name for a path
+  #
+  # @param path the {path} to turn into a class name
+  #
+  # @return {String} usable as class name
+  getClassForPath = ( path ) ->
+
+    path.replace(/[^A-Za-z0-9]/g, '-')
+
   ###
-  # Plugin code
+  #
+  # Default handlers -- these are all called with the pseudositer object
+  # as this.
+  #
   ###
-  $.pseudositer = (el, hiddenPath, options) ->
+
+  # Show the default loading notice
+  #
+  # @param spawningPath the path that caused the loading
+  showLoadingNotice = ( spawningPath ) ->
+    log "showLoadingNotice( #{spawningPath} )"
+
+    # $container = getContentContainer this
+    classForPath = getClassForPath spawningPath
+
+    # Loading notice fades in, is linked to spawning path
+    $loadingNotice = $( '<div />' ).hide()
+      .text( "Loading #{spawningPath}..." )
+      .addClass( "#{loadingClass} #{classForPath}" )
+      .appendTo( this )
+      .fadeIn( 'fast' )
+
+    undefined
+
+  # Hide the default loading notice
+  #
+  # @param spawningPath the path that caused the loading.  If not specified,
+  # removes all loading notices.
+  hideLoadingNotice = ( spawningPath ) ->
+    log "hideLoadingNotice( #{spawningPath} )"
+
+    if spawningPath?
+      classForPath = getClassForPath spawningPath
+      $elem = $(".#{loadingClass}.#{classForPath}")
+    else
+      $elem = $(".#{loadingClass}");
+
+    # fade out notice, then remove
+    $elem.fadeOut 'fast', -> $elem.remove()
+
+    undefined
+
+  # Destroy index elements that are at a deeper level than the new view.
+  #
+  # @param dfd A {Deferred} to resolve when the indices are destroyed
+  # @param aboveIndexLevel the {int} level above which indices should be
+  # destroyed
+  destroyIndex = ( dfd, aboveIndexLevel ) ->
+    log "destroyIndex( #{dfd}, #{aboveIndexLevel} )"
+
+    # pipe each destruction onto this
+    destroyed = new $.Deferred().resolve()
+
+    # look through all of the indices, remove those with levels above
+    # aboveIndexLevel
+    $( '.' + indexClass ).each ( idx, elem ) ->
+      $index = $ elem
+      if $index.data( 'pseudositer' ).level > aboveIndexLevel
+        # Deferred for a single level
+        idxDestroy = new $.Deferred ( idxDestroy ) ->
+          $index.fadeOut 'slow', () ->
+            $index.remove()
+            idxDestroy.resolve()
+
+        destroyed = destroyed.pipe idxDestroy
+
+    # when all destroying is done, resolve the original deferred.
+    destroyed.done( () -> dfd.resolve() )
+
+    undefined
+
+  # Create an index element to hold links if it does not already exist.
+  #
+  # @param dfd A {Deferred} to resolve when the index is drawn
+  # @param path the path to the index
+  # @param $links an array of {DOM} links
+  createIndex = ( dfd, path, $links ) ->
+    log "createIndex( #{dfd}, #{path}, #{$links} )"
+    indexLevel = path.split( '/' ).length - 2
+
+    # If an element with the index level's class is not on the page,
+    # create a div with the class, which is initially hidden
+    levelClass = getIndexClassForLevel indexLevel
+    $index = $( '.' + levelClass )
+    if $index.length is 0
+      $index = $( '<div />' )
+        .addClass( indexClass + ' ' + levelClass )
+        .data( 'pseudositer', { } )
+        .hide()
+      getIndexContainer( this ).append $index
+
+    # If the previous path is the same, leave the element alone
+    # and resolve immediately.
+    prevPath = $index.data( 'pseudositer' ).path
+    # lock = $index.data( 'pseudositer' ).lock # in the midst of animation
+    if path is prevPath
+      dfd.resolve()
+    else # otherwise, change the path, empty, and append new links, then resolve
+      # fade out old index, slowly, then insert new one
+      $index.fadeOut 'slow', ->
+        $index.empty()
+          .data( 'pseudositer', path : path, level : indexLevel )
+          .append( $links )
+          .fadeIn( 'slow', -> dfd.resolve() )
+
+    undefined
+
+  # Populate $elem with an image element wrapped in a link to the image
+  #
+  # @param dfd A {Deferred} to resolve with the image when it is loaded
+  # @param pathToImage the path to the image
+  loadImage = ( dfd, pathToImage ) ->
+    log "loadImage( #{dfd}, #{pathToImage} )"
+
+    # temp div to force-load image
+    $tmp = $( '<div />' )
+      .css( height: '0px', width: '0px' )
+      .appendTo $( 'body' )
+
+    # create the image wrapped in link
+    $img = $( '<a />' ).attr( 'href', pathToImage ).append(
+          $( '<img />' )
+          .attr( 'src', pathToImage )
+          # only resolve deferred upon loading, and destroy $tmp at that point too
+          #.bind( 'onload', ->
+          .bind( 'load', ->
+            dfd.resolve( $img )
+            $tmp.remove()
+          ) )
+
+    undefined
+
+  # Populate $elem with text from a file inside <pre>.
+  #
+  # @param dfd A {Deferred} to resolve with a div with the text when loaded.
+  # @param pathToText the path to the text file
+  loadText = ( dfd, pathToText ) ->
+    log "loadText( #{dfd}, #{pathToText} )"
+
+    $.get( pathToText )
+      .done( ( responseText ) -> dfd.resolve $( '<div />' ).append($('<pre />').text responseText ) )
+      .fail( ( errObj )       -> dfd.reject  errObj.statusText )
+
+    undefined
+
+  # Populate $elem with html from an HTML file's <body> if it has such a tag,
+  # the entirety of the HTML otherwise.
+  #
+  # @param dfd A {Deferred} to resolve with the HTML when loaded.
+  # @param pathToHtml the path to the html file
+  loadHtml = ( dfd, pathToHtml ) ->
+    log "loadHtml( #{dfd}, #{pathToHtml} )"
+
+    $.get( pathToHtml )
+      .done( ( responseText ) -> dfd.resolve $ responseText )
+      .fail( ( errObj )       -> dfd.reject  errObj.statusText )
+
+    undefined
+
+  # Hide existing content
+  #
+  # @param dfd the {Deferred} to resolve when the element is hidden
+  hideContent = ( dfd ) ->
+    log "hideContent( #{dfd} )"
+    # content is all the children of the content container
+    $content = getContentContainer( this ).children()
+
+    # resolve immediately if there's no content to hide
+    if $content.length is 0
+      dfd.resolve()
+    else # wait for content to disappear otherwise.
+      $content.fadeOut 'slow', ->
+        $content.detach()
+        dfd.resolve()
+
+    undefined
+
+  # Display an element within content
+  #
+  # @param dfd the {Deferred} to resolve when the element is shown
+  # @param $elem the element to display
+  showContent = ( dfd, $elem ) ->
+    log "showContent( #{dfd}, #{$elem} )"
+    $container = getContentContainer( this )
+    # hide the element, append it to container
+    $elem
+      .hide().appendTo( $container )
+      .fadeIn 'slow', -> dfd.resolve()
+    undefined
+
+  # Display an error message
+  #
+  # @param errObj the error object
+  showError = ( errObj ) ->
+    log "showError( #{errObj} )"
+    log errObj
+
+    $error = $( '.' + errorClass )
+    # create error element if one doesn't exist
+    if $error.length == 0
+
+      $error = $( '<div />' ).addClass( errorClass )
+        .appendTo getContentContainer( this )
+
+    $error.text( errObj.toString() ).fadeIn( 'fast' )
+    undefined
+
+  # Remove the current error message
+  hideError = () ->
+    log "hideError( )"
+    $error = $( '.' + errorClass )
+
+    # hide quickly, then remove text
+    $error.fadeOut( 'fast', -> $error.text( '' ) )
+
+    undefined
+
+  ###
+  #
+  # Plugin object
+  #
+  ###
+  $.pseudositer = (el, hiddenPath, options, map) ->
 
     # Access to jQuery and DOM versions of element
-    @el = el
+    # @el = el
     @$el = $ el
 
     # Add a reverse reference to the DOM object
     @$el.data "pseudositer", @
 
-    # Cache of index elements by path.  Each value is an array of <a> elements.
-    @pathIndices = {}
-
-    # Cache of content by URL.  Each value is an element that can be appended to
-    # $content.
-    @cachedContent = {}
-
-    # Cache of states by URL.  Each value is a {State}.
-    # @cachedStates = {}
+    # Cache of index pages and contents by path.
+    # Each index page element is an array of <a> elements.
+    # Each content element is DOM that can be appended to a content element.
+    @cache = {}
 
     # Initialization code
     @init = () =>
       @options = $.extend {}, $.pseudositer.defaultOptions, options
+      log @options
+      @map     = $.extend {}, $.pseudositer.defaultMap, map
 
       @visiblePath = getCurrentPath()
 
       # Ensure the hidden path ends in '/'
-      hiddenPath = if hiddenPath.charAt( hiddenPath.length - 1 ) is '/' then hiddenPath else "#{hiddenPath}/"
+      hiddenPath = "#{hiddenPath}/" unless hiddenPath.charAt( hiddenPath.length - 1 )
 
       # @realPath is used to resolve paths in the fragment
       if hiddenPath.charAt( 0 ) is '/'
@@ -191,16 +473,17 @@ and the paths to your javascript libraries as appropriate:
           else
             @realPath = @visiblePath + '/' + hiddenPath
 
-      # Create content div if one doesn't already exist,
-      # and keep reference to the div.
-      if $( '.' + @options.contentClass ).length is 0
-        @$content = $( '<div>' ).addClass @options.contentClass
-        @$el.append @$content
-      else
-        @$content = $( '.' + @options.contentClass )
-
       # Bind hash change to callback
       $( window ).bind 'hashchange', update
+
+      # Set up handlers
+      for event in events
+        for handler in @options[ event ]
+          @$el.bind "#{event}.pseudositer", handler: handler, ( evt, args... ) =>
+            # have to pass handler through event data, otherwise we keep binding
+            # the last handler in the map
+            evt.data.handler.apply( @$el, args )
+            false
 
       # Immediately update view
       update()
@@ -209,7 +492,9 @@ and the paths to your javascript libraries as appropriate:
       this
 
     ###
+    #
     # Public methods
+    #
     ###
 
     # Destroy pseudositer & remove all its content.
@@ -217,26 +502,38 @@ and the paths to your javascript libraries as appropriate:
     # @return this
     @destroy = =>
 
-      # Empty out the original element.
-      @$el.empty()
-
-      # Unbind callback
+       # Empty out the original element and unbind events
+      # after sending destroy event
       $( window ).unbind 'hashchange', update
+      trigger 'destroy'
+      @$el.empty().unbind '.pseudositer'
+
+      # Remove the data element
+      @$el.removeData 'pseudositer'
+
+      # Reset the page fragment
+      document.location.hash = "";
 
       this
 
     ###
+    #
     # Private methods.
+    #
     ###
 
-    # Get the class name for an index of a specified level.
+    # Trigger an event on the pseudositer element (uses triggerHandler).
+    # Adds ".pseudositer" namespace.
     #
-    # @param level the {int} level, starting with 0, of the index.
+    # @param eventName the name of the event, without namespace
+    # @param args a splat of arguments to pass
     #
-    # @return {String} the name of the class
-    getIndexClassForLevel = ( level ) =>
+    # @return this
+    trigger = ( eventName, args... ) =>
+      log "trigger( #{eventName}, #{args} )"
 
-      @options.indexClass + '-' + level
+      @$el.triggerHandler "#{eventName}.pseudositer", args
+      @
 
     # Construct the absolute path for an ajax request from an absolute
     # path that would have been found in a fragment.
@@ -249,11 +546,14 @@ and the paths to your javascript libraries as appropriate:
     #
     # @return {String} a path that can be used for an ajax request.
     getAjaxPath = ( path ) =>
+      log "getAjaxPath( #{path} )"
+
       # path should start with '/'
       @realPath + path.substr 1
 
-    # Update browser to display the view associated with the current state.
-    # Only loads path indexes and content if it's not cached.
+    # Update browser to display the view associated with the current fragment.
+    # Will load, then change fragment (which will call {#update()} again) if
+    # the content is not yet cached.
     #
     # @return this
     update = ( ) =>
@@ -267,74 +567,104 @@ and the paths to your javascript libraries as appropriate:
         document.location.hash = '/'
         return
 
-      # if the content is cached, everything is ready to display.
-      if @cachedContent[ path ]?
+      #trigger 'update', path
+
+      # if the path is cached, we've got everything loaded up for it.
+      if @cache[ path ]?
+        # always show indices
         showIndices path
-        showContent @cachedContent[ path ]
-        @$el.triggerHandler @options.loadedEvent
+
+        # Hide current content, resolving contentHidden when complete
+        contentHidden = new $.Deferred()
+        trigger 'hideContent', contentHidden
+
+        # only show content if the path points to content
+        if isPathToFile path
+          $content = @cache[ path ]
+          contentShown = new $.Deferred()
+
+          # When hide content is done, trigger show content
+          # if there's a failure, make sure alwaysEvent is called.
+          contentHidden
+            .done( () ->
+              trigger 'showContent', contentShown, $content )
+            .fail( ( errObj ) ->
+              trigger 'showError', errObj )
 
       else # load the data for the state
-        @$el.triggerHandler @options.loadingEvent
-
-        progress = new $.Deferred()
-
-        # unfold the path then load if recursion is true
-        if @options.recursion is true
-          unfold( path )
-            # once the path is unfolded, load content and indexes for it
-            .done( ( unfoldedPath ) ->
-              load( unfoldedPath )
-                .done(            -> progress.resolve unfoldedPath )
-                .fail( (failObj)  -> progress.reject failObj ) )
-            .fail( ( failObj ) -> progress.reject failObj )
-        else # load the path immediately otherwise
-          load( path )
-            .done( -> progress.resolve path )
-            .fail( (failObj)  -> progress.reject failObj )
-
-        # reject deferred after timeout
-        setTimeout (
-           => progress.reject "Timeout after #{@options.timeout} ms"
-        ), @options.timeout
-
-        # handle possible deferred completions
-        progress
-          # when done with progress, update the fragment. this will force update,
-          # and display the content.
-          .done( (loadedPath) ->
+        load( path )
+          # restart update() from the top when done loading.
+          .done( ( loadedPath ) ->
             if path is loadedPath # force update, changing hash will do nothing
               update()
             else # update will happen due to hash change
               document.location.hash = loadedPath )
-          .fail( (errObj)     -> log errObj )
+          .fail( ( errObj ) -> trigger 'showError', errObj )
 
       this
 
     # Obtain a {Promise} object that, once done, means that
-    # @pathIndices has all the paths leading to the supplied path's content,
-    # and that @cachedContent contains the content.
+    # @cache has all the paths leading to the supplied path's content,
+    # as well as the content (if applicable).
     #
-    # @param path the path to load
+    # @param spawningPath the original path to load
     #
     # @return {Promise} object that, when done, means that
-    # content has been loaded into @cachedContent and that indexes are
-    # cached in @pathIndices
-    load = ( unfoldedPath ) =>
-      log "load( #{unfoldedPath} )"
+    # content and indices have been loaded into @cache
+    # It receives one argument, which
+    # is the pseudopath that was actually loaded.
+    load = ( spawningPath ) =>
+      log "load( #{spawningPath} )"
 
-      contentPromise = loadContent unfoldedPath
-      dfd = new $.Deferred().resolve().pipe -> contentPromise
+      trigger 'startLoading', spawningPath
 
-      # Make sure that any pre-specified trails are in our cache.
-      trails = getIndexTrail unfoldedPath
+      # unfold the path then load if recursion is true
+      if @options.recursion is true
+        pathDfd = unfold( spawningPath )
+      else # load the path immediately otherwise
+        pathDfd = new $.Deferred().resolve( spawningPath )
 
-      # request any trails leading to path
-      for trail in trails[ 0..trails.length - 1 ]
-        # start loading the index now
-        indexPromise = loadIndex trail
-        dfd = dfd.pipe -> indexPromise
+      progress = new $.Deferred()
 
-      dfd.promise()
+      # start loading when the path is available
+      pathDfd
+        .done( ( path ) ->
+          dfd = new $.Deferred().resolve()
+
+          # if the path is pointing to a file, then load the file.
+          if isPathToFile path
+            contentPromise = loadContent path
+            dfd = dfd.pipe -> contentPromise
+
+          # Make sure that any pre-specified trails are in our cache.
+          trails = getIndexTrail path
+
+          # request any trails leading to path
+          for trail in trails[ 0..trails.length - 1 ]
+            # start loading the index now
+            indexPromise = loadIndex trail
+            dfd = dfd.pipe -> indexPromise
+
+          # when done, resolve with the path used
+          dfd.done( ()         -> progress.resolve( path ) )
+             .fail( ( errObj ) -> progress.reject errObj   ) )
+        .fail( ( errObj ) -> progress.reject errObj )
+
+      # reject deferred after timeout
+      setTimeout (
+         => progress.reject "Timeout after #{@options.timeout} ms"
+      ), @options.timeout
+
+      # handle possible deferred completions
+      progress
+        .done( (loadedPath) ->
+          trigger 'doneLoading', spawningPath, loadedPath )
+        .fail( (errObj) ->
+          trigger 'failedLoading', spawningPath )
+        .always( ->
+          trigger 'alwaysLoading', spawningPath )
+
+      progress.promise()
 
     # Asynchronously determine the nearest content to this path,
     # loading indices into cache all along the way.
@@ -348,29 +678,30 @@ and the paths to your javascript libraries as appropriate:
     unfold = ( path, dfd = new $.Deferred() ) =>
       log "unfold( #{path}, #{dfd} )"
 
-      # if path already points to content, resolve the deferred
+      # the path points to content, we can resolve it
       if getSuffix( path )?
         dfd.resolve path
       else
 
         # when the index is loaded, call unfold again using the first
         # link and reusing the deferred object
-        $.when( loadIndex( path ) )
-          .done =>
-            $links = @pathIndices[ path ]
+        loadIndex( path )
+          .done( () =>
+            $links = @cache[ path ]
             if $links.length is 0 # empty index page
               dfd.reject "#{path} has no content"
-            else
-              # the link attr is hashified
+              # dfd.resolve( path )
+            else # the link attr is already hashified
               unfold $links.first().attr( 'href' ).substr( 1 ), dfd
-          .fail ( failObj ) ->
-            dfd.reject failObj
+
+          )
+          .fail( ( errObj ) -> dfd.reject errObj )
 
       dfd.promise()
 
     # If there is no entry for the index,
     # make an ajax request for a path to the index page, and cache
-    # all the links on that index page into @pathIndices.
+    # all the links on that index page into @cache.
     #
     # @param indexPath the path to an index page
     #
@@ -383,16 +714,17 @@ and the paths to your javascript libraries as appropriate:
 
       # if the index is cached, use the links stored there and resolve
       # immediately
-      if @pathIndices[ indexPath ]?
+      if @cache[ indexPath ]?
         dfd.resolve()
 
       # otherwise, load the index and resolve once that's done
       else
-        $.get getAjaxPath( indexPath ), ( responseText ) =>
+        $.get( getAjaxPath( indexPath ), ( responseText ) =>
 
-          # hashify href tags
+          # hashify href tags, add class
           $links = $( responseText )
             .find( @options.linkSelector )
+            .addClass( linkClass )
             .attr 'href', ( idx, oldValue ) ->
               # use old value as hash if absolute
               if oldValue.charAt( 0 ) is '/'
@@ -401,123 +733,113 @@ and the paths to your javascript libraries as appropriate:
               else
                 '#' + indexPath + oldValue
 
-          @pathIndices[ indexPath ] = $links
-        .done =>
-          dfd.resolve()
-        .fail ->
-          dfd.reject( "Could not load index page for #{indexPath}" )
+          @cache[ indexPath ] = $links
+        ).done( () -> dfd.resolve() )
+         .fail( () -> dfd.reject "Could not load index page for #{indexPath}" )
 
       dfd.promise()
 
     # Load the content located at a path
     #
-    # @param pathToContent the path to the content
+    # @param pathToContent the pseudopath to the content
     #
-    # @return {Promise} that resolves when content is in @cachedContent.
-    # Will fail if there is no handler for the file suffix.
+    # @return {Promise} that resolves when content loaded into @cache.
+    # Will fail if there is a problem loading the content.
     loadContent = ( pathToContent ) =>
       log "loadContent( #{pathToContent} )"
 
       dfd = new $.Deferred()
       suffix = getSuffix pathToContent
 
-      # if @cachedContent[ pathToContent ]? # resolve immediately if already cached
-      #   dfd.resolve()
-      # Use the handler in @options.map
-      if @options.map[ suffix ]?
-        @options.map[ suffix ]( getAjaxPath pathToContent )
-          .done( ( $content ) =>
-            # save to @cachedContent upon success
-            @cachedContent[ pathToContent ] = $content
-            # resolve the deferred
-            dfd.resolve())
-          .fail( ( failObj ) -> dfd.reject failObj )
-      else # log an error if there's no handler
-        dfd.reject("No handler for content type " + suffix)
+      # Use the handler in @map if we have one, default otherwise
+      handler = if @map[ suffix ]? then @map[ suffix ] else @map[ '' ]
+      trigger handler, dfd, getAjaxPath( pathToContent )
+      dfd.done( ( $content ) =>
+        # save to @cache upon success
+        @cache[ pathToContent ] = $content
+        # resolve the deferred
+        dfd.resolve() )
+      .fail( ( errObj ) -> dfd.reject errObj )
 
       dfd.promise()
 
     # Show the index for an unfolded path, in addition to all its parent
     # index pages. This data should already have been loaded into
-    # @pathIndices .
+    # @cache .
     #
     # @param path the path to show links for
     #
-    # @return this
+    # @return {Promise} that is resolved when all the indices are visible
     showIndices = ( path ) =>
       log "showIndices( #{path} )"
 
+      # remove any index elements that are deeper than the new path
+      dfd = new $.Deferred()
+      trigger 'destroyIndex', dfd, getPathDepth path
+
       trails = getIndexTrail path
 
-      # mark all link elements as stale before we iterate through the
-      # path
-      $( '.' + @options.indexClass ).addClass @options.staleClass
+      # an array of deferreds whose last element will be resolved when
+      # indexes are all created
+      idxDfds = [ dfd ]
+      # create indices once the old ones are destroyed, and consecutively
+      # by piping deferreds.
+      for trail in trails
+        $links = @cache[ trail ]
+        idxDfds.push( idxDfds[ idxDfds.length - 1]
+          .pipe -> trigger 'createIndex', new $.Deferred(), trail, $links )
 
-      for level in [ 0...trails.length ]
-
-        trail = trails[ level ]
-
-        # If an element with the index level's class is not on the page,
-        # create a div with the class
-        levelClass = getIndexClassForLevel level
-        $index = $( '.' + levelClass )
-        if $index.length is 0
-          $index = $( '<div />' )
-            .addClass( @options.indexClass + ' ' + levelClass )
-            .data( 'pseudositer', { } )
-          @$el.append $index
-
-        # If the previous path is the same, leave the element alone
-        # otherwise, change the path, empty, and append new links
-        prevPath = $index.data( 'pseudositer' ).path
-        unless trail is prevPath
-          $index
-            .empty()
-            .data( 'pseudositer', path : trail )
-            .append @pathIndices[ trail ]
-
-        # ensure that this index element is not removed.
-        $index.removeClass @options.staleClass
-
-      # remove any index elements that are deeper than the new path
-      $( '.' + @options.indexClass + '.' + @options.staleClass ).remove()
-
-      this
-
-    # Remove existing content and show new content.
-    #
-    # @param $content the DOM content to display.
-    #
-    # @return this
-    showContent = ( $content ) =>
-      log "showContent( #{$content} )"
-
-      $( @$content ).empty()
-        .append( $content );
-      this
+      idxDfds[ idxDfds.length - 1 ].promise()
 
     # call init, and return the output
     @init()
 
-  # object literal containing default options
+  # default options
   $.pseudositer.defaultOptions =
-    contentClass   : 'pseudositer-content'
-    staleClass     : 'pseudositer-stale'
-    indexClass     : 'pseudositer-index'
-    linkSelector   : 'a:not([href^="?"],[href^="/"])' # Find links from an index page that go deeper
-    loadingEvent   : 'loading.pseudositer'
-    loadedEvent    : 'loaded.pseudositer'
-    timeout        : 1000
-    recursion      : true
-    map :
-      png : loadImage
-      gif : loadImage
-      jpg : loadImage
-      jpeg: loadImage
-      txt : loadText
-      html: loadText
 
-  $.fn.pseudositer = (hiddenPath, options) ->
+    linkSelector   : 'a:not([href^="?"],[href^="/"],[href^="."])' # Find relative links from an index page that go deeper
+
+    # default handlers
+    update         : [ hideError ]
+
+    startLoading  : [ showLoadingNotice ]
+    failedLoading : [ ]
+    doneLoading   : [ ]
+    alwaysLoading : [ hideLoadingNotice ]
+
+    destroyIndex: [ destroyIndex ]
+    createIndex : [ createIndex ]
+
+    loadImage   : [ loadImage ]
+    loadText    : [ loadText ]
+    loadHtml    : [ loadHtml ]
+    loadDefault : [ loadText ]
+    hideContent : [ hideContent ]
+    showContent : [ showContent ]
+    showError   : [ showError ]
+
+    destroy     : [ hideLoadingNotice, hideError ]
+
+    timeout    : 10000
+    recursion  : false
+
+  # Default handler map.  The handlers will be called with a deferred and
+  # a path to the content with the named extension.
+  $.pseudositer.defaultMap  =
+    png : 'loadImage'
+    gif : 'loadImage'
+    jpg : 'loadImage'
+    jpeg: 'loadImage'
+    txt : 'loadText'
+    html: 'loadHtml'
+    ''  : 'loadDefault' # default handler
+
+  $.fn.pseudositer = (hiddenPath, options, map = {}) ->
+
+    # if the user specified map as part of their options hash, extend map.
+    if options?.map?
+      $.extend map, options.map
+
     $.each @, (i, el) ->
       $el = ($ el)
 
@@ -527,6 +849,6 @@ and the paths to your javascript libraries as appropriate:
         # the instance can always be retrieved as element.data 'pseudositer'
         # You can do things like:
         # (element.data 'pseudositer').publicMethod1();
-        $el.data 'pseudositer', new $.pseudositer el, hiddenPath, options
+        $el.data 'pseudositer', new $.pseudositer el, hiddenPath, options, map
   undefined
 )(jQuery)
