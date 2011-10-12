@@ -323,7 +323,7 @@ and the paths to your javascript libraries as appropriate:
 
     undefined
 
-  # Populate $elem with an image element wrapped in a link to the image
+  # Resolve deferred with an image element wrapped in a link to the image
   #
   # @param evt the event that called this handler.
   # @param dfd A {Deferred} to resolve with the image when it is loaded
@@ -349,7 +349,7 @@ and the paths to your javascript libraries as appropriate:
 
     undefined
 
-  # Populate $elem with text from a file inside <pre>.
+  # Resolve deferred with text from a file inside <pre>.
   #
   # @param evt the event that called this handler.
   # @param dfd A {Deferred} to resolve with a div with the text when loaded.
@@ -363,8 +363,9 @@ and the paths to your javascript libraries as appropriate:
 
     undefined
 
-  # Populate $elem with html from an HTML file's <body> if it has such a tag,
-  # the entirety of the HTML otherwise.
+  # Resolve deferred with the DOM from an HTML file.
+  #
+  # TODO: make sure sure that only the body is loaded.
   #
   # @param evt the event that called this handler.
   # @param dfd A {Deferred} to resolve with the HTML when loaded.
@@ -375,6 +376,18 @@ and the paths to your javascript libraries as appropriate:
     $.get( pathToHtml )
       .done( ( responseText ) -> dfd.resolve $ responseText )
       .fail( ( errObj )       -> dfd.reject  errObj.statusText )
+
+    undefined
+
+  # Resolve deferred with an absolute link to the file.
+  #
+  # @param evt the event that called this handler.
+  # @param dfd A {Deferred} to resolve with the link.
+  # @param pathToFile the path to the file
+  download = ( evt, dfd, pathToFile ) ->
+    log "download( #{dfd}, #{pathToFile} )"
+
+    dfd.resolve $( '<a />' ).text( pathToFile ).attr 'href', pathToFile
 
     undefined
 
@@ -812,7 +825,11 @@ and the paths to your javascript libraries as appropriate:
 
     linkSelector   : 'a:not([href^="?"],[href^="/"],[href^="../"])' # Find relative links from an index page that go deeper
 
-    # default handlers
+    # Default map between event handlers and static functions.
+    # If any of these options are overriden, the static function
+    # will not be called.  If you want to add a callback instead
+    # of replacing the default functionality, bind your additional
+    # callback to the event instead of passing it as an option.
     update         : [ hideError ]
 
     startLoading  : [ showLoadingNotice ]
@@ -826,18 +843,26 @@ and the paths to your javascript libraries as appropriate:
     loadImage   : [ loadImage ]
     loadText    : [ loadText ]
     loadHtml    : [ loadHtml ]
-    loadDefault : [ loadText ]
+    loadDefault : [ download ]
     hideContent : [ hideContent ]
     showContent : [ showContent ]
     showError   : [ showError ]
 
     destroy     : [ hideLoadingNotice, hideError ]
 
+    # How many milliseconds to wait between the start of loading and
+    # when loading is resolved.
     timeout    : 10000
+
+    # If recursion is true, directories recursively open until content
+    # or an empty directory is found.
     recursion  : false
 
-  # Default handler map.  The handlers will be called with a deferred and
-  # a path to the content with the named extension.
+  # Default map between file extensions and event handlers.
+  # In addition to the event object, any callbacks
+  # bound to these events will receive a deferred and an absolute path to the
+  # content that should be loaded.  When the callback is complete, the deferred
+  # must be resolved or the loading will time out.
   $.pseudositer.defaultMap  =
     png : 'loadImage'
     gif : 'loadImage'
