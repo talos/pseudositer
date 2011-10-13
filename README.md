@@ -109,121 +109,120 @@ Pseudositer triggers events upon its own element.  If `#pseudositer` is your Pse
 
 All pseudositer events are unbound when the plugin is destroyed.  Most events have arguments in addition to the event object.  These are necessary if you are changing how Pseudositer's handlers work.
 
-#### startUpdate
+#### startUpdate ( `evt`, `path` )
+
+* `evt` the event object
+* `path` the path that pseudositer is updating to display
 
 Triggered when pseudositer begins to update.
 
-* evt the event object
-* path the path that pseudositer is updating to display
+#### doneUpdate ( `evt` )
 
-#### doneUpdate
+* `evt` the event object
 
 Triggered when pseudositer is done updating.
 
-* evt the event object
+#### startLoading ( `evt`, `path` )
 
-#### startLoading
+* `evt` the event object
+* `path` the path that pseudositer is starting to load
 
 Triggered when pseudositer begins loading new content.  If content is already cached, this will not be fired.
 
-* evt the event object
-* path the path that pseudositer is starting to load
+#### failedLoading ( `evt`, `path` )
 
-
-#### failedLoading
+* `evt` the event object
+* `path` the path that pseudositer could not load
 
 Triggered when pseudositer fails to load a path.
 
-* evt the event object
-* path the path that pseudositer could not load
+#### doneLoading ( `evt`, `path` )
 
-#### doneLoading
+* `evt` the event object
+* `path` the path that pseudositer successfully loaded
 
 Triggered when pseudositer has successfully loaded a path
 
-* evt the event object
-* path the path that pseudositer successfully loaded
+#### alwaysLoading ( `evt`, `path` )
 
-#### alwaysLoading
+* `evt` the event object
+* `path` the path that pseudositer loaded successfully or failed to load
 
 Triggered once after either doneLoading or failedLoading
 
-* evt the event object
-* path the path that pseudositer loaded successfully or failed to load
+#### destroyIndex ( `evt`, `dfd`, `aboveIndexLevel` )
 
-#### destroyIndex
+* `evt` the event object
+* `dfd` A jQuery Deferred object.  This should be resolved when all the necessary indices are no longer visible, or rejected if there was an error doing this.
+* `aboveIndexLevel` the 0-based index level above which indices should no longer be visible.  For example, if the user just navigated to `#/`, this would be `0`.  All indices of level 1 or more should be removed.
 
 Triggered when indices above a certain level should be removed from display.
 
-* evt the event object
-* dfd A jQuery Deferred object.  This should be resolved when all the necessary indices are no longer visible, or rejected if there was an error doing this.
-* aboveIndexLevel the 0-based index level above which indices should no longer be visible.  For example, if the user just navigated to `#/`, this would be `0`.  All indices of level 1 or more should be removed.
+#### createIndex ( `evt`, `dfd`, `path`, `$links` )
 
-#### createIndex
+* `evt` the event object
+* `dfd` A jQuery Deferred object.  This should be resolved when the index has been created, or rejected if there was an error doing this.
+* `path` The path to the index that is being created
+* `$links` An array of links from the index
 
 Triggered when an index to a certain path should be created with the specified links.
 
-* evt the event object
-* dfd A jQuery Deferred object.  This should be resolved when the index has been created, or rejected if there was an error doing this.
-* path The path to the index that is being created
-* $links An array of links from the index
-
-#### loadImage
+#### loadImage ( `evt`, `dfd($elem)`, `pathToImage` )
 
 Triggered when an image should be loaded
 
-* evt the event object
-* dfd($elem) A jQuery Deferred object.  This should be resolved once the image has been loaded, with a single argument that is the image element.  This element will be saved to cache and displayed in the content element.
-* pathToImage the absolute path to the image
+* `evt` the event object
+* `dfd($elem)` A jQuery Deferred object.  This should be resolved once the image has been loaded, with a single argument that is the image element.  This element will be saved to cache and displayed in the content element.
+* `pathToImage` the absolute path to the image
 
-#### loadText
+#### loadText ( `evt`, `dfd($elem)`, `pathToText` )
+
+* `evt` the event object
+* `dfd($elem) A jQuery Deferred object.  This should be resolved once the text has been loaded, with a single argument that is a DOM element with the text.  This element will be saved to cache and displayed in the content element.
+* `pathToText the absolute path to the text
 
 Triggered when text should be loaded
 
-* evt the event object
-* dfd($elem) A jQuery Deferred object.  This should be resolved once the text has been loaded, with a single argument that is a DOM element with the text.  This element will be saved to cache and displayed in the content element.
-* pathToText the absolute path to the text
+#### loadHtml ( `evt`, `dfd($elem)`, `pathToHtml` )
 
-#### loadHtml
+* `evt` the event object
+* `dfd($elem)` A jQuery Deferred object.  This should be resolved once the HTML has been loaded, with a single argument that is a DOM element with the HTML.  This element will be saved to cache and displayed in the content element.
+* `pathToHtml` the absolute path to the HTML
 
 Triggered when HTML should be loaded
 
-* evt the event object
-* dfd($elem) A jQuery Deferred object.  This should be resolved once the HTML has been loaded, with a single argument that is a DOM element with the HTML.  This element will be saved to cache and displayed in the content element.
-* pathToHTML the absolute path to the HTML
+#### loadDefault ( `evt`, `dfd($elem)`, `pathToFile` )
 
-#### loadDefault
+* `evt` the event object
+* `dfd($elem)` A jQuery Deferred object.  This should be resolved once whatever action to be performed has been done, with a single argument that could be a DOM element.  This element will be saved to cache and displayed in the content element.
+* `pathToFile` the absolute path to the file
 
 Triggered when content that is not otherwise mapped should be loaded
-
-* evt the event object
-* dfd($elem) A jQuery Deferred object.  This should be resolved once whatever action to be performed has been done, with a single argument that could be a DOM element.  This element will be saved to cache and displayed in the content element.
-* pathToFile the absolute path to the file
 
 #### hideContent
 
 Triggered when existing content should be hidden
 
-* evt the event object
-* dfd A jQuery Deferred object that should be resolved once the content is hidden.
+* `evt` the event object
+* `dfd` A jQuery Deferred object that should be resolved once the content is hidden.
 
 #### showContent
 
 Triggered when new content should be shown 
 
-* evt the event object
-* dfd A jQuery Deferred object that should be resolved once the content is displayed.
-* $content A DOM element with the content that should be shown
+* `evt` the event object
+* `dfd` A jQuery Deferred object that should be resolved once the content is displayed.
+* `$content` A DOM element with the content that should be shown
 
 #### showError
 
 Triggered when an error should be displayed
 
-* evt the event object
-* errObj a javascript object with the error
+* `evt` the event object
+* `errObj` a javascript object with the error
 
 #### destroy
 
 Triggered after a call to `destroy()`, but before handlers are unbound.
 
-* evt the event object
+* `evt` the event object
