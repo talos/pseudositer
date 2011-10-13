@@ -1,7 +1,7 @@
 /**
   * Global pseudositer element.
   */
-var $elem;
+var $pseudo;
 
 /** 
   * Default jasmine-jquery fixtures directory makes more
@@ -22,42 +22,21 @@ if( document.location.protocol === "file:" ) {
 }
 
 /**
-  * Wait for an event to fire on an element.
+  * Wait for an event to fire on $pseudo.
   *
-  * @param $elem the element to observe
   * @param eventName the name of the event to wait for
   * @param timeout how many milliseconds to wait for
   */
-var waitForEvent = function( $elem, eventName, timeout ) {
+var waitsForEvent = function( $elem, eventName, timeout ) {
 	var eventFired = false;
-	$elem.one( eventName, function() {
-		eventFired = true;
+	runs(function() {
+		$elem.one( eventName, function() {
+			eventFired = true;
+		});
 	});
 	waitsFor(function() {
 		return eventFired === true;
-	}, timeout, eventName + " to fire on " + $elem.attr('id'));
-};
-
-/**
-  * Convenience method that waits 1 second for the
-  * 'alwaysLoading.pseudositer' event to fire upon an element.
-  *
-  * @param $elem the element to observe.
-  */
-var waitForPseudositer = function( $elem ) {
-	waitForEvent( $elem, 'alwaysLoading.pseudositer', 1000 );
-};
-
-/**
-  * Synchronously change the address bar to an address,
-  * by wrapping the call in a "runs" block.
-  *
-  * @param fragment the fragment to set in the address bar.
-  */
-var setFragment = function( fragment ) {
-	runs(function() {
-		document.location.hash = fragment;
-	});
+	}, timeout, eventName + " to be triggered on #" + $elem.attr('id'));
 };
 
 /**
@@ -83,13 +62,13 @@ var getRealPath = function( pseudoPath ) {
   **/
 beforeEach(function() {
 	// Ensure that prior pseudositer is gone first.
-	waitsFor(function() {
-		return typeof $elem.data( 'pseudositer' ) === 'undefined' || $elem.data( 'pseudositer' ) === null;
-	}, 3000, 'Pseudositer stuck around after last test finished');
+	// waitsFor(function() {
+	// 	return typeof $pseudo.data( 'pseudositer' ) === 'undefined' || $pseudo.data( 'pseudositer' ) === null;
+	// }, 3000, 'pseudositer to be destroyed');
 	
 	runs(function() {
 		setFixtures( $( '<div />' ).attr( 'id', 'pseudositer' ) );
-		$elem = $('#pseudositer');
+		$pseudo = $('#pseudositer');
 	});
 });
 
@@ -98,8 +77,9 @@ beforeEach(function() {
   */
 afterEach(function() {
 	runs(function() {
-		if( typeof $elem.data('pseudositer') !== 'undefined' && $elem.data('pseudositer') !== null) {
-			$elem.data('pseudositer').destroy();
+		if( typeof $pseudo.data('pseudositer') !== 'undefined' && $pseudo.data('pseudositer') !== null) {
+			$pseudo.data('pseudositer').destroy();
 		}
 	});
+	//waitsForEvent( $pseudo, 'destroy.pseudositer', 1000 );
 });

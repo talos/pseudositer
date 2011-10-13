@@ -6,11 +6,6 @@
 
     <!-- pseudositer -->
     <script type="text/javascript" src="../lib/pseudositer/pseudositer.js"></script>
-    <!-- <script type="text/javascript"> -->
-    <!--   $(document).ready(function() { -->
-    <!--     $('#pseudositer').pseudositer('../fixtures/simple/'); -->
-    <!--   }); -->
-    <!-- </script> -->
 
 	<!-- allow user to change pseudopath -->
     <script type="text/javascript">
@@ -37,6 +32,13 @@
 	  
 	      return false;
 		});
+
+	    /* Change recursion value upon click. */
+	    $('#recursion').click( function() {
+	      $('#pseudositer')
+	        .data( 'pseudositer' )
+	        .setRecursion( $(this).is( ':checked' ) );
+	    });
 	    
 	    /* Prevent default form submission */
 	    $('form').submit(function() {
