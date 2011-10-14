@@ -4,6 +4,10 @@
 
 - - -
 
+[wiki](https://github.com/talos/pseudositer/wiki)
+
+- - -
+
 ### what it is
 
 Pseudositer is a jQuery plugin that creates a website via AJAX requests for Apache (or equivalent) index pages. Users can navigate folders of text, image, and other files within one HTML file, with nary a line of server-side code.
