@@ -54,6 +54,8 @@ and the paths to your javascript libraries as appropriate:
     'destroyIndex' # ( evt, dfd, aboveIndexLevel ) Triggered when indices above a certain level should be destroyed
     'createIndex'  # ( evt, dfd, path, $links ) Triggered when an index to a certain path should be created with the specified links
 
+    'selectLink'   # ( evt, dfd, path ) Triggered when a link is selected
+
     'loadImage'    # ( evt, dfd($elem), pathToImage ) Triggered when an image should be loaded
     'loadText'     # ( evt, dfd($elem), pathToText ) Triggered when text should be loaded
     'loadHtml'     # ( evt, dfd($elem), pathToHtml ) Triggered when HTML should be loaded
@@ -77,6 +79,7 @@ and the paths to your javascript libraries as appropriate:
   loadingClass = 'pseudositer-loading'
   errorClass   = 'pseudositer-error'
   linkClass    = 'pseudositer-link'
+  selectedLinkClass = 'pseudositer-link-selected'
 
   ###
   #
@@ -378,6 +381,25 @@ and the paths to your javascript libraries as appropriate:
         showIndex.resolve()
 
     undefined
+
+  # Add selectedLinkClass to the link with a certain path, remove it from
+  # any others.
+  #
+  # @param evt the event that called this handler.
+  # @param dfd A {Deferred} to resolve when the index is drawn
+  # @param path the path to the index
+  selectLink = ( evt, dfd, path ) ->
+    level = path.split( '/' ).length - 2
+
+    $index = $( ".#{getIndexClassForLevel(level)}" )
+
+    # remove existing selected link classes within this level
+    $index.find( ".#{linkClass}" ).removeClass( selectedLinkClass )
+
+    # and add the class to the correct link
+    $index.find( ".#{linkClass}[href=\"\##{path}\"]" ).addClass( selectedLinkClass )
+
+    dfd.resolve()
 
   # Resolve deferred with an image element wrapped in a link to the image
   #
@@ -699,28 +721,35 @@ and the paths to your javascript libraries as appropriate:
         .fail( ( failObj ) -> updateDfd.reject failObj )
         .done( () =>
           # always show indices
-          showIndices path
+          indicesShown = showIndices path
 
           # Actions to perform after content is hidden
           contentHidden = new $.Deferred()
-            .fail( ( failObj ) -> updateDfd.reject failObj )
-            .done( () =>
 
+          # Hide content immediately
+          trigger 'hideContent', contentHidden
+
+          # trigger hideContent after both content is hidden and
+          # indices are shown
+          $.when( indicesShown, contentHidden )
+            .done( =>
               # only show content if the path points to content
               if isPathToFile path
+                linkSelected = new $.Deferred()
+                trigger 'selectLink', linkSelected, path
+
                 $content = @cache[ path ]
                 contentShown = new $.Deferred()
                   .done( ()          -> updateDfd.resolve() )
                   .fail( ( failObj ) -> updateDfd.reject failObj )
 
-                # When hide content is done, trigger show content
-                trigger 'showContent', contentShown, $content
-
+                # when link is selected, show the content
+                linkSelected.done ->
+                  trigger 'showContent', contentShown, $content
               else # otherwise resolve update process immediately
                 updateDfd.resolve() )
-
-          # trigger hideContent after filter has been added
-          trigger 'hideContent', contentHidden )
+            .fail( ( failObj ) -> updateDfd.reject failObj )
+        )
 
       this
 
@@ -893,9 +922,17 @@ and the paths to your javascript libraries as appropriate:
         $links = @cache[ trail ]
         lastPromise = promises[ promises.length - 1 ]
         indexCreated = new $.Deferred()
+        linkSelected = new $.Deferred()
+
+        # when last link is selected, create the new index
         lastPromise.done =>
           trigger 'createIndex', indexCreated, trail, $links
-        promises.push( indexCreated.promise() )
+
+        # when the new index is created, select its link
+        indexCreated.done =>
+          trigger 'selectLink', linkSelected, trail
+
+        promises.push( linkSelected.promise() )
 
       promises[ promises.length - 1 ]
 
@@ -922,6 +959,8 @@ and the paths to your javascript libraries as appropriate:
 
     destroyIndex: [ destroyIndex ]
     createIndex : [ createIndex ]
+
+    selectLink  : [ selectLink ]
 
     loadImage   : [ loadImage ]
     loadText    : [ loadText ]
