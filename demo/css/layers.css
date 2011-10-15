@@ -1,0 +1,56 @@
+/* show off pseudositer-index-<N> functionality */
+
+body {
+  color: white;
+  background-color: black;
+}
+
+a {
+  text-decoration: none;
+}
+
+a:hover {
+  font-weight: bold;
+}
+
+.pseudositer-index-0 {
+  background-color: #222;
+}
+.pseudositer-index-0 a {
+  color: #EDD;
+}
+
+.pseudositer-index-1 {
+  background-color: #444;
+}
+.pseudositer-index-1 a {
+  color: #EBB;
+}
+
+.pseudositer-index-2 {
+  background-color: #666;
+}
+.pseudositer-index-2 a {
+  color: #DAA;
+}
+
+.pseudositer-index-3 {
+  background-color: #888;
+}
+.pseudositer-index-3 a {
+  color: #C99;
+}
+
+.pseudositer-index-4 {
+  background-color: #AAA;
+}
+.pseudositer-index-4 a {
+  color: #C66;
+}
+
+.pseudositer-index-5 {
+  background-color: #CCC;
+}
+.pseudositer-index-5 a {
+  color: #C33;
+}

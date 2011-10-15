@@ -6,105 +6,20 @@
 
     <!-- pseudositer -->
     <script type="text/javascript" src="../lib/pseudositer/pseudositer.js"></script>
+    <script type="text/javascript" src="js/pseudopather.js"></script>
+    <script type="text/javascript" src="js/styleswitcher.js"></script>
 
-	<!-- allow user to change pseudopath -->
-    <script type="text/javascript">
+    <!-- styles -->
+    <link rel="alternate stylesheet" title="None" type="text/css" href="css/none.css" />
+    <link rel="stylesheet" title="Simple" type="text/css" href="css/simple.css" />
+    <link rel="alternate stylesheet" title="Layers" type="text/css" href="css/layers.css" />
+    <!-- <link rel="alternate stylesheet" title="Techno" type="text/css" href="css/techno.css" /> -->
+    <link rel="alternate stylesheet" title="Vertical" type="text/css" href="css/vertical.css" />
 
-	  var oldPlug, defaultPseudopath;
-	  defaultPseudopath = '../fixtures/';
-
-	  $( document ).ready( function() {
-	    $( '#pseudositer-submit' ).click( function() {
-	  
-	      oldPlug = $('#pseudositer').data('pseudositer');
-
-		  /* Remove the prior plugin if this was already initialized. */
-		  if( typeof oldPlug !== 'undefined' && oldPlug !== null ) {
-			oldPlug.destroy();
-		  }
-
-		  /* Initialize pseudositer with the value of the input. */
-		  $('#pseudositer').pseudositer(
-	        $('#pseudopath').val(), {
-	          recursion : $('#recursion').is(':checked')
-	        }
-	      );
-	  
-	      return false;
-		});
-
-	    /* Change recursion value upon click. */
-	    $('#recursion').click( function() {
-	      $('#pseudositer')
-	        .data( 'pseudositer' )
-	        .setRecursion( $(this).is( ':checked' ) );
-	    });
-	    
-	    /* Prevent default form submission */
-	    $('form').submit(function() {
-		  /*$( '#pseudositer-submit' ).click(); */
-	      return false;
-		});
-
-		/* Click when the page first loads. */
-		$( '#pseudopath' ).val( defaultPseudopath );
-	    $(' #pseudositer-submit' ).click();
-	  });
-    </script>
-	
-	<!-- simple inline style example -->
-	<style type="text/css" >
-	  #pseudositer {
-	    font-family: sans-serif;
-	  }
-	  .pseudositer-content {
-	    border: 1px solid red;
-	    margin: .5em;
-	    padding: .5em;
-	  }
-	  .pseudositer-index {
-	    border:  1px solid black;
-	    margin: .5em;
-	  }
-	  .pseudositer-index a {
-	    margin: .5em;
-	  }
-	  .pseudositer-loading {
-	    position: absolute;
-	    background-color: black;
-	    color: white;
-	    left: 30%;
-	    right: 30%;
-	    top: 30%;
-	    bottom: 30%;
-	    vertical-align: middle;
-	    text-align: center;
-	  }
-	  .pseudositer-error {
-	    position: absolute;
-	    background-color: red;
-	    color: white;
-	    text-align: center;
-	    z-index: 10;
-	    vertical-align: middle;
-	    left: 30%;
-	    right: 30%;
-	    top: 30%;
-	    bottom: 30%;
-	  }
-	</style>
-	
   </head>
   <body>
-	<div>
-	  <form id="pseudositer-form" action="simple.html">
-		<label for="pseudopath">Pseudopath:</label><input type="text" name="pseudopath" id="pseudopath" />
-		<label for="recursion">Recursion:</label><input type="checkbox" name="recursion" id="recursion" checked />
-		<button id="pseudositer-submit">Submit</button>
-	  </form>
-	</div>
-	<hr>
-	</div>
-    <div id="pseudositer" />
+    <div id="pseudopather"></div>  
+    <div id="pseudositer"></div>
+    <div id="styleswitcher"></div>
   </body>
 </html>

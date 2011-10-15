@@ -1,0 +1,54 @@
+/* A very simple style set */
+
+.pseudositer-index {
+  background-color: #DDD;
+  border: 1px solid black;
+  padding: .2em;
+  margin: .2em;
+  text-align: center;
+}
+
+.pseudositer-index a {
+  background-color: #BBB;
+  border: 1px solid black;
+  padding: .1em;
+  margin: .1em;
+  color: black;
+  text-decoration: none;
+}
+
+.pseudositer-index a:hover {
+  background-color: white;
+}
+
+.pseudositer-content {
+  margin: 1em;
+  padding: 1em;
+  border: 1px dashed black;
+  text-align: center;
+}
+
+.pseudositer-loading {
+  position: absolute;
+  background-color: #BBB;
+  border: 1px solid black;
+  left: 30%;
+  right: 30%;
+  top: 30%;
+  bottom: 30%;
+  vertical-align: middle;
+  text-align: center;
+}
+.pseudositer-error {
+  position: absolute;
+  background-color: #BBB;
+  color: red;
+  border: 1px solid red;
+  text-align: center;
+  z-index: 10;
+  vertical-align: middle;
+  left: 30%;
+  right: 30%;
+  top: 30%;
+  bottom: 30%;
+}
