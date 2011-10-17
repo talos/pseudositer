@@ -43,8 +43,8 @@ and the paths to your javascript libraries as appropriate:
 
   events = [
 
-    'startUpdate' # ( evt, path ) Triggered when update begins
-    'doneUpdate'  # ( evt ) Triggered when update is done
+    'startUpdate' # ( evt, path, fullPath ) Triggered when update begins
+    'doneUpdate'  # ( evt, path, fullPath ) Triggered when update is done
 
     'startLoading'  # ( evt, path ) Triggered when loading begins
     'failedLoading' # ( evt, path ) Triggered when loading fails
@@ -323,11 +323,13 @@ and the paths to your javascript libraries as appropriate:
 
     dfd.promise()
 
-  # Generate link to file.
+  # Redirect to file, forcing load.
   #
   # @param pathToFile the path to the file
   download = ( pathToFile ) ->
-    new $.Deferred().resolve $( '<a />' ).text( pathToFile ).attr 'href', pathToFile
+    window.location = pathToFile
+    new $.Deferred().resolve()
+    #new $.Deferred().resolve $( '<a />' ).text( pathToFile ).attr 'href', pathToFile
 
   ###
   #
@@ -696,12 +698,11 @@ and the paths to your javascript libraries as appropriate:
         redirectToFile( path )
         return
 
-      trigger 'startUpdate', path
+      trigger 'startUpdate', path, getAjaxPath path
 
       updateDfd = new $.Deferred()
-        .done(             -> trigger 'doneUpdate' )
+        .done(             -> trigger 'doneUpdate', path, getAjaxPath path )
         .fail( ( failObj ) -> trigger 'showError', failObj )
-        .always(           -> trigger 'alwaysUpdate' )
 
       # Don't start updating until the last one is done
       @updating.always =>

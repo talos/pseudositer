@@ -1,52 +1,73 @@
 /* This script creates a form that can be used to change up pseudositer options on a page. */
 
 $( document ).ready( function() {
-  var oldPlug, defaultPseudopath;
-  defaultPseudopath = '../fixtures/';
+	var oldPlug, defaultPseudopath;
+	defaultPseudopath = '../fixtures/';
 
-  // Create form
-  $( '#pseudopather' ).prepend( $('<div />').append( $('<form />')
-    .append( $('<label />').attr( 'for', 'pseudopath' ).text( 'Pseudopath:' ))
-    .append( $('<input />').attr( { type: 'text', name: 'pseudopath', id: 'pseudopath' } ))
-    .append( $('<label />').attr( 'for', 'recursion' ).text( 'Recursion:' ))
-    .append( $('<input />').attr( { type: 'checkbox', name: 'recursion', id: 'recursion', checked: true } ))
-    .append( $('<button />').attr( 'id', 'pseudositer-submit' ).text( 'Submit' ))))
-  .append( $('<hr />') );
+	// Create form
+	$( '#pseudopather' ).prepend(
+		$('<div />')
+			.append($('<form />')
+					.append($('<label />').attr( 'for', 'pseudopath' ).text( 'Pseudopath:' ))
+					.append($('<input />').attr( { type: 'text', name: 'pseudopath', id: 'pseudopath' } ))
+					.append( $('<label />').attr( 'for', 'recursion' ).text( 'Recursion:' ))
+					.append( $('<input />').attr( { type: 'checkbox', name: 'recursion', id: 'recursion' } ))
+					.append( $('<button />').attr( 'id', 'pseudopather-submit' ).text( 'Submit' )))
+			.append($('<a />').attr({ href: 'javascript:null', id: 'pseudopather-preview' }))
+			.append($('<iframe />').hide().attr( 'id', 'pseudopather-iframe' ).css({ width: '95%', height: '250px' })))
+		.append( $('<hr />') );
 
-  // Handle submit
-  $( '#pseudositer-submit' ).click( function() {
+	// Handle submit
+	$( '#pseudopather-submit' ).click( function() {
 
-    oldPlug = $('#pseudositer').data('pseudositer');
+		var oldPlug = $( '#pseudositer' ).data( 'pseudositer' ),
+		pseudopath = $( '#pseudopath' ).val();
 
-	/* Remove the prior plugin if this was already initialized. */
-	if( typeof oldPlug !== 'undefined' && oldPlug !== null ) {
-	      oldPlug.destroy();
-	}
+		/* Remove the prior plugin if this was already initialized. */
+		if( typeof oldPlug !== 'undefined' && oldPlug !== null ) {
+			oldPlug.destroy();
+		}
 
-	/* Initialize pseudositer with the value of the input. */
-	$('#pseudositer').pseudositer(
-      $('#pseudopath').val(), {
-	recursion : $('#recursion').is(':checked')
-      }
-    );
+		/* Initialize pseudositer with the value of the input. */
+		$('#pseudositer').pseudositer(
+			pseudopath,
+			{
+				recursion : $('#recursion').is(':checked')
+			}
+		);
 
-    return false;
-      });
+		/* Change the src of the iframe */
+		$('#pseudopather-iframe').attr( 'src', pseudopath );
 
-  /* Change recursion value upon click. */
-  $('#recursion').click( function() {
-    $('#pseudositer')
-      .data( 'pseudositer' )
-      .setRecursion( $(this).is( ':checked' ) );
-  });
+		/* Always update iframe to show current path. */
+		$('#pseudositer').bind( 'doneUpdate.pseudositer', function( evt, path, fullPath ) {
+			$('#pseudopather-iframe').attr( 'src', fullPath );
+			$('#pseudopather-preview').text( fullPath );
+		});
 
-  /* Prevent default form submission */
-  $('form').submit(function() {
-	/*$( '#pseudositer-submit' ).click(); */
-    return false;
-      });
+		return false;
+    });
 
-      /* Click when the page first loads. */
-      $( '#pseudopath' ).val( defaultPseudopath );
-  $(' #pseudositer-submit' ).click();
+
+	/* Hide the preview on click */
+	$('#pseudopather-preview').click( function() {
+		$('#pseudopather-iframe').toggle();
+	});
+
+	/* Change recursion value upon click. */
+	$('#recursion').click( function() {
+		$('#pseudositer')
+			.data( 'pseudositer' )
+			.setRecursion( $(this).is( ':checked' ) );
+	});
+
+	/* Prevent default form submission */
+	$('form').submit(function() {
+		/*$( '#pseudopather-submit' ).click(); */
+		return false;
+    });
+
+    /* Click when the page first loads. */
+    $( '#pseudopath' ).val( defaultPseudopath );
+	$(' #pseudopather-submit' ).click();
 });
