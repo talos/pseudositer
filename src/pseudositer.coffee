@@ -54,12 +54,8 @@ and the paths to your javascript libraries as appropriate:
     'destroyIndex' # ( evt, dfd, aboveIndexLevel ) Triggered when indices above a certain level should be destroyed
     'createIndex'  # ( evt, dfd, path, $links ) Triggered when an index to a certain path should be created with the specified links
 
-    'selectLink'   # ( evt, dfd, path ) Triggered when a link is selected
+    'selectLink'   # ( evt, dfd, path, $link ) Triggered when a link is selected.
 
-    'loadImage'    # ( evt, dfd($elem), pathToImage ) Triggered when an image should be loaded
-    'loadText'     # ( evt, dfd($elem), pathToText ) Triggered when text should be loaded
-    'loadHtml'     # ( evt, dfd($elem), pathToHtml ) Triggered when HTML should be loaded
-    'loadDefault'  # ( evt, dfd($elem), pathToFile ) Triggered when a file should be loaded
     'hideContent'  # ( evt, dfd ) Triggered when existing content should be hidden
     'showContent'  # ( evt, dfd, $content ) Triggered when new content should be shown
     'showError'    # ( evt, errObj ) Triggered when an error should be displayed
@@ -258,6 +254,79 @@ and the paths to your javascript libraries as appropriate:
     else
       path
 
+  # Remove existing selected link classes within this path's level, add selected link
+  # class to link for supplied path
+  #
+  # path the path that was selected
+  #
+  # @return the link element that gained the selected class
+  updateLinkClasses = ( path ) ->
+
+    $link = $( ".#{linkClass}[href=\"\##{path}\"]" )
+    $link.siblings( ".#{linkClass}" ).removeClass( selectedLinkClass )
+    $link.addClass selectedLinkClass
+
+  # Load an image.
+  #
+  # @param pathToImage the path to the image
+  #
+  # @return A {Promise} that will be resolved with the image element.
+  loadImage = ( pathToImage ) ->
+    # temp div to force-load image
+    $tmp = $( '<div />' )
+      .css( height: '0px', width: '0px' )
+      .appendTo $( 'body' )
+
+    dfd = new $.Deferred()
+
+    # create the image wrapped in link
+    $img = $( '<a />' ).attr( 'href', pathToImage ).append(
+          $( '<img />' )
+          .attr( 'src', pathToImage )
+          # only resolve deferred upon loading, and destroy $tmp at that point too
+          .bind( 'load', ->
+            dfd.resolve( $img )
+            $tmp.remove()
+          ) )
+
+    dfd.promise()
+
+  # Load a text file into <pre>.
+  #
+  # @param pathToText the path to the text file
+  #
+  # @return A {Promise} that will be resolved with the text.
+  loadText = ( pathToText ) ->
+    dfd = new $.Deferred()
+
+    $.get( pathToText )
+      .done( ( responseText ) -> dfd.resolve $( '<div />' ).append($('<pre />').text responseText ) )
+      .fail( ( errObj )       -> dfd.reject  errObj.statusText )
+
+    dfd.promise()
+
+  # Load HTML into a <div>
+  #
+  # TODO: make sure sure that only the body is loaded.
+  #
+  # @param pathToHtml the path to the html file
+  #
+  # @return A {Promise} that will be resolved with the HTML element.
+  loadHtml = ( pathToHtml ) ->
+    dfd = new $.Deferred()
+
+    $.get( pathToHtml )
+      .done( ( responseText ) -> dfd.resolve $ responseText )
+      .fail( ( errObj )       -> dfd.reject  errObj.statusText )
+
+    dfd.promise()
+
+  # Generate link to file.
+  #
+  # @param pathToFile the path to the file
+  download = ( pathToFile ) ->
+    new $.Deferred().resolve $( '<a />' ).text( pathToFile ).attr 'href', pathToFile
+
   ###
   #
   # Default handlers -- these are all called with the pseudositer object
@@ -322,8 +391,7 @@ and the paths to your javascript libraries as appropriate:
       if getIndexLevel( $index ) > aboveIndexLevel
         # Deferred for a single level
         idxDestroy = new $.Deferred ( idxDestroy ) ->
-          $index.fadeOut 'slow', () ->
-            # $index.remove()
+          $index.fadeOut 'fast', () ->
             idxDestroy.resolve()
 
         destroyed = destroyed.pipe -> idxDestroy
@@ -368,13 +436,13 @@ and the paths to your javascript libraries as appropriate:
 
     # show index and resolve supplied deferred
     showIndex = new $.Deferred().done ->
-      $index.fadeIn( 'slow', -> dfd.resolve() )
+      $index.fadeIn( 'fast', -> dfd.resolve() )
 
     # if the path is the same as already available, show right away
     if path is prevPath
       showIndex.resolve()
     else # otherwise, modify the element then resolve
-      $index.fadeOut 'slow', ->
+      $index.fadeOut 'fast', ->
         $index.empty()
           .data( 'pseudositer', path : path )
           .append( $links )
@@ -382,97 +450,17 @@ and the paths to your javascript libraries as appropriate:
 
     undefined
 
-  # Add selectedLinkClass to the link with a certain path, remove it from
-  # any others.
+  # No default action, resolves deferred immediately.
   #
   # @param evt the event that called this handler.
   # @param dfd A {Deferred} to resolve when the index is drawn
   # @param path the path to the index
-  selectLink = ( evt, dfd, path ) ->
-    # exclude trailing slash from count
-    level = path.split( '/' ).substr( 0, path.length - 1 ).length - 2
-
-    $index = $( ".#{getIndexClassForLevel(level)}" )
-
-    # remove existing selected link classes within this level
-    $index.find( ".#{linkClass}" ).removeClass( selectedLinkClass )
-    log
-    log $index.find(".#{linkClass}" )
-
-    # and add the class to the correct link
-    $index.find( ".#{linkClass}[href=\"\##{path}\"]" ).addClass( selectedLinkClass )
-    log $index.find( ".#{linkClass}[href=\"\##{path}\"]" )
+  # @param $link the link element that was selected
+  selectLink = ( evt, dfd, path, $link ) ->
 
     dfd.resolve()
 
-  # Resolve deferred with an image element wrapped in a link to the image
-  #
-  # @param evt the event that called this handler.
-  # @param dfd A {Deferred} to resolve with the image when it is loaded
-  # @param pathToImage the path to the image
-  loadImage = ( evt, dfd, pathToImage ) ->
-    if @logging then log "loadImage( #{dfd}, #{pathToImage} )"
-
-    # temp div to force-load image
-    $tmp = $( '<div />' )
-      .css( height: '0px', width: '0px' )
-      .appendTo $( 'body' )
-
-    # create the image wrapped in link
-    $img = $( '<a />' ).attr( 'href', pathToImage ).append(
-          $( '<img />' )
-          .attr( 'src', pathToImage )
-          # only resolve deferred upon loading, and destroy $tmp at that point too
-          #.bind( 'onload', ->
-          .bind( 'load', ->
-            dfd.resolve( $img )
-            $tmp.remove()
-          ) )
-
     undefined
-
-  # Resolve deferred with text from a file inside <pre>.
-  #
-  # @param evt the event that called this handler.
-  # @param dfd A {Deferred} to resolve with a div with the text when loaded.
-  # @param pathToText the path to the text file
-  loadText = ( evt, dfd, pathToText ) ->
-    if @logging then log "loadText( #{dfd}, #{pathToText} )"
-
-    $.get( pathToText )
-      .done( ( responseText ) -> dfd.resolve $( '<div />' ).append($('<pre />').text responseText ) )
-      .fail( ( errObj )       -> dfd.reject  errObj.statusText )
-
-    undefined
-
-  # Resolve deferred with the DOM from an HTML file.
-  #
-  # TODO: make sure sure that only the body is loaded.
-  #
-  # @param evt the event that called this handler.
-  # @param dfd A {Deferred} to resolve with the HTML when loaded.
-  # @param pathToHtml the path to the html file
-  loadHtml = ( evt, dfd, pathToHtml ) ->
-    if @logging then log "loadHtml( #{dfd}, #{pathToHtml} )"
-
-    $.get( pathToHtml )
-      .done( ( responseText ) -> dfd.resolve $ responseText )
-      .fail( ( errObj )       -> dfd.reject  errObj.statusText )
-
-    undefined
-
-  # Resolve deferred with an absolute link to the file.
-  #
-  # @param evt the event that called this handler.
-  # @param dfd A {Deferred} to resolve with the link.
-  # @param pathToFile the path to the file
-  download = ( evt, dfd, pathToFile ) ->
-    if @logging then log "download( #{dfd}, #{pathToFile} )"
-
-    dfd.resolve $( '<a />' ).text( pathToFile ).attr 'href', pathToFile
-
-    undefined
-
   # Hide existing content
   #
   # @param evt the event that called this handler.
@@ -486,7 +474,7 @@ and the paths to your javascript libraries as appropriate:
     if $content.length is 0
       dfd.resolve()
     else # wait for content to disappear otherwise.
-      $content.fadeOut 'slow', ->
+      $content.fadeOut 'fast', ->
         $content.detach()
         dfd.resolve()
 
@@ -503,7 +491,7 @@ and the paths to your javascript libraries as appropriate:
     # hide the element, append it to container
     $elem
       .hide().appendTo( $container )
-      .fadeIn 'slow', -> dfd.resolve()
+      .fadeIn 'fast', -> dfd.resolve()
     undefined
 
   # Display an error message
@@ -541,7 +529,7 @@ and the paths to your javascript libraries as appropriate:
   # Plugin object
   #
   ###
-  $.pseudositer = (el, hiddenPath, options, map) ->
+  $.pseudositer = (el, hiddenPath, options) ->
 
     # Access to jQuery and DOM versions of element
     # @el = el
@@ -558,10 +546,13 @@ and the paths to your javascript libraries as appropriate:
     # Initialization code
     @init = () =>
       @options = $.extend {}, $.pseudositer.defaultOptions, options
-      @map     = $.extend {}, $.pseudositer.defaultMap, map
+      @map     = $.extend {}, $.pseudositer.defaultMap, @options.map
 
       @visiblePath = getCurrentPath()
       @logging = @options.logging
+
+      # Promise used to queue updating
+      @updating = new $.Deferred().resolve().promise()
 
       # Ensure the hidden path ends in '/'
       hiddenPath = "#{hiddenPath}/" unless hiddenPath.charAt( hiddenPath.length - 1 )
@@ -710,50 +701,56 @@ and the paths to your javascript libraries as appropriate:
         .fail( ( failObj ) -> trigger 'showError', failObj )
         .always(           -> trigger 'alwaysUpdate' )
 
-      # load the path if it's not already cached
-      if @cache[ path ]?
-        loaded = new $.Deferred().resolve()
-      else
-        loaded = load( path )
+      # Don't start updating until the last one is done
+      @updating.always =>
+        @updating = updateDfd.promise()
 
-      # force end loading after timeout
-      setTimeout (
-         => updateDfd.reject "Load timeout after #{@options.timeout} ms"
-      ), @options.timeout
+        # load the path if it's not already cached
+        if @cache[ path ]?
+          loaded = new $.Deferred().resolve()
+        else
+          loaded = load( path )
 
-      loaded
-        .fail( ( failObj ) -> updateDfd.reject failObj )
-        .done( () =>
-          # always show indices
-          indicesShown = showIndices path
+        # force end loading after timeout
+        setTimeout (
+           => updateDfd.reject "Load timeout after #{@options.timeout} ms"
+        ), @options.timeout
 
-          # Actions to perform after content is hidden
-          contentHidden = new $.Deferred()
+        loaded
+          .fail( ( failObj ) -> updateDfd.reject failObj )
+          .done( () =>
+            # always show indices
+            indicesShown = showIndices path
 
-          # Hide content immediately
-          trigger 'hideContent', contentHidden
+            # Actions to perform after content is hidden
+            contentHidden = new $.Deferred()
 
-          # trigger hideContent after both content is hidden and
-          # indices are shown
-          $.when( indicesShown, contentHidden )
-            .done( =>
-              # only show content if the path points to content
-              if isPathToFile path
-                linkSelected = new $.Deferred()
-                trigger 'selectLink', linkSelected, path
+            # Hide content immediately
+            trigger 'hideContent', contentHidden
 
-                $content = @cache[ path ]
-                contentShown = new $.Deferred()
-                  .done( ()          -> updateDfd.resolve() )
-                  .fail( ( failObj ) -> updateDfd.reject failObj )
+            # trigger hideContent after both content is hidden and
+            # indices are shown
+            $.when( indicesShown, contentHidden )
+              .done( =>
+                # only show content if the path points to content
+                if isPathToFile path
+                  linkSelected = new $.Deferred()
 
-                # when link is selected, show the content
-                linkSelected.done ->
-                  trigger 'showContent', contentShown, $content
-              else # otherwise resolve update process immediately
-                updateDfd.resolve() )
-            .fail( ( failObj ) -> updateDfd.reject failObj )
-        )
+
+                  trigger 'selectLink', linkSelected, path, updateLinkClasses( path )
+
+                  $content = @cache[ path ]
+                  contentShown = new $.Deferred()
+                    .done( ()          -> updateDfd.resolve() )
+                    .fail( ( failObj ) -> updateDfd.reject failObj )
+
+                  # when link is selected, show the content
+                  linkSelected.done ->
+                    trigger 'showContent', contentShown, $content
+                else # otherwise resolve update process immediately
+                  updateDfd.resolve() )
+              .fail( ( failObj ) -> updateDfd.reject failObj )
+          )
 
       this
 
@@ -859,13 +856,19 @@ and the paths to your javascript libraries as appropriate:
               if showExtension is false
                 fullName = clipExtension fullName
               fullName
-            .attr 'href', ( idx, oldValue ) ->
+            .attr 'href', ( idx, oldValue ) =>
               # use old value as hash if absolute
               if oldValue.charAt( 0 ) is '/'
-                '#' + decodeURI( oldValue )
+                if @options.decodeUri is true
+                  '#' + decodeURI( oldValue )
+                else
+                  '#' + oldValue
               # resolve against index path otherwise
               else
-                '#' + decodeURI( indexPath + oldValue )
+                if @options.decodeUri is true
+                  '#' + decodeURI( indexPath + oldValue )
+                else
+                  '#' + indexPath + oldValue
 
           @cache[ indexPath ] = $links
 
@@ -885,20 +888,22 @@ and the paths to your javascript libraries as appropriate:
     loadContent = ( pathToContent ) =>
       if @logging then log "loadContent( #{pathToContent} )"
 
-      dfd = new $.Deferred()
       suffix = getSuffix pathToContent
+      loadedIntoCache = new $.Deferred()
 
       # Use the handler in @map if we have one, default otherwise
       handler = if @map[ suffix ]? then @map[ suffix ] else @map[ '' ]
-      trigger handler, dfd, getAjaxPath( pathToContent )
-      dfd.done( ( $content ) =>
+
+      # handler should return a promise
+      promise = handler getAjaxPath( pathToContent )
+      promise.done( ( $content ) =>
         # save to @cache upon success
         @cache[ pathToContent ] = $content
         # resolve the deferred
-        dfd.resolve() )
+        loadedIntoCache.resolve() )
       .fail( ( errObj ) -> dfd.reject errObj )
 
-      dfd.promise()
+      loadedIntoCache.promise()
 
     # Show the index for an unfolded path, in addition to all its parent
     # index pages. This data should already have been loaded into
@@ -930,13 +935,13 @@ and the paths to your javascript libraries as appropriate:
 
         # when last link is selected, create the new index
         lastPromise.done =>
-          trigger 'createIndex', indexCreated, trail, $links
+          trigger 'selectLink', linkSelected, trail, updateLinkClasses( trail )
 
         # when the new index is created, select its link
-        indexCreated.done =>
-          trigger 'selectLink', linkSelected, trail
+        linkSelected.done =>
+          trigger 'createIndex', indexCreated, trail, $links
 
-        promises.push( linkSelected.promise() )
+        promises.push( indexCreated.promise() )
 
       promises[ promises.length - 1 ]
 
@@ -966,10 +971,6 @@ and the paths to your javascript libraries as appropriate:
 
     selectLink  : [ selectLink ]
 
-    loadImage   : [ loadImage ]
-    loadText    : [ loadText ]
-    loadHtml    : [ loadHtml ]
-    loadDefault : [ download ]
     hideContent : [ hideContent ]
     showContent : [ showContent ]
     showError   : [ showError ]
@@ -977,7 +978,7 @@ and the paths to your javascript libraries as appropriate:
     destroy     : [ hideLoadingNotice, hideError ]
 
     # Whether to log function calls
-    logging     : true
+    logging     : false
 
     # How many milliseconds to wait between the start of loading and
     # when loading is resolved.
@@ -990,25 +991,24 @@ and the paths to your javascript libraries as appropriate:
     # If showExtension is true, links to content display their extension
     showExtension : false
 
+    # If decodeUri is true, links will be decoded.
+    decodeUri : false
+
   # Default map between file extensions and event handlers.
   # In addition to the event object, any callbacks
   # bound to these events will receive a deferred and an absolute path to the
   # content that should be loaded.  When the callback is complete, the deferred
   # must be resolved or the loading will time out.
   $.pseudositer.defaultMap  =
-    png : 'loadImage'
-    gif : 'loadImage'
-    jpg : 'loadImage'
-    jpeg: 'loadImage'
-    txt : 'loadText'
-    html: 'loadHtml'
-    ''  : 'loadDefault' # default handler
+    png : loadImage
+    gif : loadImage
+    jpg : loadImage
+    jpeg: loadImage
+    txt : loadText
+    html: loadHtml
+    ''  : download # default handler
 
-  $.fn.pseudositer = (hiddenPath, options, map = {}) ->
-
-    # if the user specified map as part of their options hash, extend map.
-    if options?.map?
-      $.extend map, options.map
+  $.fn.pseudositer = (hiddenPath, options) ->
 
     $.each @, (i, el) ->
       $el = ($ el)
@@ -1019,6 +1019,6 @@ and the paths to your javascript libraries as appropriate:
         # the instance can always be retrieved as element.data 'pseudositer'
         # You can do things like:
         # (element.data 'pseudositer').publicMethod1();
-        $el.data 'pseudositer', new $.pseudositer el, hiddenPath, options, map
+        $el.data 'pseudositer', new $.pseudositer el, hiddenPath, options
   undefined
 )(jQuery)

@@ -8,7 +8,7 @@
   text-align: center;
 }
 
-.pseudositer-index a {
+a.pseudositer-link {
   background-color: #BBB;
   border: 1px solid black;
   padding: .1em;
@@ -17,7 +17,11 @@
   text-decoration: none;
 }
 
-.pseudositer-index a:hover {
+a.pseudositer-link:hover {
+  font-weight: bold;
+}
+
+a.pseudositer-link-selected {
   background-color: white;
 }
 
