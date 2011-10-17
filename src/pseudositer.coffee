@@ -286,8 +286,10 @@ and the paths to your javascript libraries as appropriate:
           # only resolve deferred upon loading, and destroy $tmp at that point too
           .bind( 'load', ->
             dfd.resolve( $img )
+            $tmp.remove() )
+          .bind('error', ->
             $tmp.remove()
-          ) )
+            dfd.reject( 'Could not load image at ' + pathToImage ) ) )
 
     dfd.promise()
 
@@ -901,7 +903,7 @@ and the paths to your javascript libraries as appropriate:
         @cache[ pathToContent ] = $content
         # resolve the deferred
         loadedIntoCache.resolve() )
-      .fail( ( errObj ) -> dfd.reject errObj )
+      .fail( ( errObj ) -> loadedIntoCache.reject errObj )
 
       loadedIntoCache.promise()
 
