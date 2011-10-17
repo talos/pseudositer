@@ -389,15 +389,19 @@ and the paths to your javascript libraries as appropriate:
   # @param dfd A {Deferred} to resolve when the index is drawn
   # @param path the path to the index
   selectLink = ( evt, dfd, path ) ->
-    level = path.split( '/' ).length - 2
+    # exclude trailing slash from count
+    level = path.split( '/' ).substr( 0, path.length - 1 ).length - 2
 
     $index = $( ".#{getIndexClassForLevel(level)}" )
 
     # remove existing selected link classes within this level
     $index.find( ".#{linkClass}" ).removeClass( selectedLinkClass )
+    log
+    log $index.find(".#{linkClass}" )
 
     # and add the class to the correct link
     $index.find( ".#{linkClass}[href=\"\##{path}\"]" ).addClass( selectedLinkClass )
+    log $index.find( ".#{linkClass}[href=\"\##{path}\"]" )
 
     dfd.resolve()
 
