@@ -11,5 +11,5 @@ all:
 
 clean:
 	@echo Cleaning lib/pseudositer...
-	rm -f lib/pseudositer/*.js
-	rm -f lib/pseudositer/extensions/*.js
+	rm -f lib/pseudositer/pseudositer.js
+	rm -f lib/pseudositer/extensions/pseudositer.markdown.js
