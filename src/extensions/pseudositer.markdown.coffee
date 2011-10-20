@@ -28,27 +28,27 @@
 
 (($) ->
 
-	# A Markdown converter to reuse.
-	converter = new Showdown.converter()
+  # A Markdown converter to reuse.
+  converter = new Showdown.converter()
 
-	# Load a file and convert it to markdown.
-	#
-	# @param pathToMarkdown the path to the markdown
-	#
+  # Load a file and convert it to markdown.
+  #
+  # @param pathToMarkdown the path to the markdown
+  #
   # @return the Markdown as HTML
-	loadMarkdown = ( pathToMarkdown ) ->
-		dfd = new $.Deferred()
-		$.get( pathToMarkdown )
-			.done( ( responseText ) ->
-				dfd.resolve(
-					$( '<div />' ).html(
-						converter.makeHtml( responseText )
-					) )
-			)
-			.fail( ( errObj ) ->
-				dfd.reject errObj.statusText
-			)
-		dfd
+  loadMarkdown = ( pathToMarkdown ) ->
+    dfd = new $.Deferred()
+    $.get( pathToMarkdown )
+      .done( ( responseText ) ->
+        dfd.resolve(
+          $( '<div />' ).html(
+            converter.makeHtml( responseText )
+          ) )
+      )
+      .fail( ( errObj ) ->
+        dfd.reject errObj.statusText
+      )
+    dfd
 
   # Extend our handlers map with markdown
   $.extend $.pseudositer.defaultMap,
