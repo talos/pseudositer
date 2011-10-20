@@ -6,8 +6,14 @@
 
     <!-- pseudositer -->
     <script type="text/javascript" src="../lib/pseudositer/pseudositer.js"></script>
-    <script type="text/javascript" src="js/pseudopather.js"></script>
-    <script type="text/javascript" src="js/styleswitcher.js"></script>
+    <script type="text/javascript" src="../lib/pseudositer/extensions/pseudopather.js"></script>
+    <script type="text/javascript" src="../lib/styleswitcher/styleswitcher.js"></script>
+
+	<script type="text/javascript">
+	  $( document ).ready( function() {
+	    $('form#styleswitcher').styleswitcher();
+	  });
+	</script>
 
     <!-- styles -->
     <link rel="alternate stylesheet" title="None" type="text/css" href="css/none.css" />
@@ -16,11 +22,12 @@
     <!-- <link rel="alternate stylesheet" title="Techno" type="text/css" href="css/techno.css" /> -->
     <link rel="alternate stylesheet" title="Vertical" type="text/css" href="css/vertical.css" />
 
+
   </head>
   <body>
 	<h2>Demo: no special HTML, dynamically generated page</h2>
     <div id="pseudopather"></div>  
     <div id="pseudositer"></div>
-    <div id="styleswitcher"></div>
+    <form id="styleswitcher"></div>
   </body>
 </html>
