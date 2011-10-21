@@ -21,7 +21,7 @@ Apply pseudositer to the selected elements with the specified options.
 
 * `recursionValue` `true` to enable recursion, `false` to disable recursion.
 
-Enable or disable recursion.  Calling this method will cause pseudositer to immediately refresh the page.  This can be set at initialization using the [recursion](Options#wiki-recursion) option.
+Enable or disable recursion.  Calling this method will cause pseudositer to immediately refresh the page.  This can be set at initialization using the recursion option.
 - - -
 ### <a name="destroy">.destroy()</a>
 

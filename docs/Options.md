@@ -1,6 +1,12 @@
 Options are set by passing an options object to the `.pseudositer( options )` constructor.
 
 - - -
+### <a name="decodeUri">decodeUri</a>
+
+**default:** `false`
+
+Whether pseudositer should preprocess address fragments with `decodeURI`.  Were this false, a file called `a couple a words & more.html` would appear as `a%20couple%20a%20words%20%26%20more.html` in the address bar.  Were it true, the file's name would not be modified in the address bar.
+- - -
 ### <a name="linkSelector">linkSelector</a>
 
 **default:** `a:not([href^="?"],[href^="/"],[href^="../"])`

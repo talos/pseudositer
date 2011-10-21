@@ -9,13 +9,16 @@ All pseudositer events are unbound when the plugin is destroyed.  Most events ha
 ### <a name="startUpdate.pseudositer">startUpdate.pseudositer</a> _function( `evt`, `path` )_
 
 * `evt` the event object
-* `path` the path that pseudositer is updating to display
+* `path` the path that pseudositer is updating to display, relative to the content directory
+# `fullPath` the absolute path that pseudositer is updating to display
 
 Triggered when pseudositer begins to update.
 - - -
 ### <a name="doneUpdate.pseudositer">doneUpdate.pseudositer</a> _function( `evt` )_
 
 * `evt` the event object
+* `path` the path that pseudositer is updating to display, relative to the content directory
+# `fullPath` the absolute path that pseudositer is updating to display
 
 Triggered when pseudositer is done updating.
 - - -
@@ -63,38 +66,6 @@ Triggered when indices above a certain level should be removed from display.
 * `$links` An array of links from the index
 
 Triggered when an index to a certain path should be created with the specified links.
-- - -
-### <a name="loadImage.pseudositer">loadImage.pseudositer</a> _function( `evt`, `dfd($elem)`, `pathToImage` )_
-
-* `evt` the event object
-* `dfd($elem)` A jQuery Deferred object.  This should be resolved once the image has been loaded, with a single argument that is the image element.  This element will be saved to cache and displayed in the content element.
-* `pathToImage` the absolute path to the image
-
-Triggered when an image should be loaded
-- - -
-### <a name="loadText.pseudositer">loadText.pseudositer</a> _function( `evt`, `dfd($elem)`, `pathToText` )_
-
-* `evt` the event object
-* `dfd($elem)` A jQuery Deferred object.  This should be resolved once the text has been loaded, with a single argument that is a DOM element with the text.  This element will be saved to cache and displayed in the content element.
-* `pathToText` the absolute path to the text
-
-Triggered when text should be loaded
-- - -
-### <a name="loadHtml.pseudositer">loadHtml.pseudositer</a> _function( `evt`, `dfd($elem)`, `pathToHtml` )_
-
-* `evt` the event object
-* `dfd($elem)` A jQuery Deferred object.  This should be resolved once the HTML has been loaded, with a single argument that is a DOM element with the HTML.  This element will be saved to cache and displayed in the content element.
-* `pathToHtml` the absolute path to the HTML
-
-Triggered when HTML should be loaded
-- - -
-### <a name="loadDefault.pseudositer">loadDefault.pseudositer</a> _function( `evt`, `dfd($elem)`, `pathToFile` )_
-
-* `evt` the event object
-* `dfd($elem)` A jQuery Deferred object.  This should be resolved once whatever action to be performed has been done, with a single argument that could be a DOM element.  This element will be saved to cache and displayed in the content element.
-* `pathToFile` the absolute path to the file
-
-Triggered when content that is not otherwise mapped should be loaded
 - - -
 ### <a name="hideContent.pseudositer">hideContent.pseudositer</a> _function( `evt`, `dfd` )_
 
