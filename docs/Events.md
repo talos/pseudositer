@@ -10,7 +10,7 @@ All pseudositer events are unbound when the plugin is destroyed.  Most events ha
 
 * `evt` the event object
 * `path` the path that pseudositer is updating to display, relative to the content directory
-# `fullPath` the absolute path that pseudositer is updating to display
+* `fullPath` the absolute path that pseudositer is updating to display
 
 Triggered when pseudositer begins to update.
 - - -
@@ -18,7 +18,7 @@ Triggered when pseudositer begins to update.
 
 * `evt` the event object
 * `path` the path that pseudositer is updating to display, relative to the content directory
-# `fullPath` the absolute path that pseudositer is updating to display
+* `fullPath` the absolute path that pseudositer is updating to display
 
 Triggered when pseudositer is done updating.
 - - -
