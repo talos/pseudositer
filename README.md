@@ -4,7 +4,7 @@
 
 - - -
 
-[wiki](https://github.com/talos/pseudositer/wiki)
+[website](http://invisiblearchitecture.net/pseudositer/)
 
 - - -
 
