@@ -17,6 +17,7 @@ all:
 		cp -R `pwd`/template-skeleton/* `pwd`/samples/templates/$${style/%.css/}/ ; \
 		mkdir `pwd`/samples/templates/$${style/%.css/}/css ; \
 		cp `pwd`/samples/styles/$$style `pwd`/samples/templates/$${style/%.css/}/css/pseudositer-stylesheet.css ; \
+		zip -r `pwd`/samples/templates/$${style/%.css/}.zip `pwd`/samples/templates/$${style/%.css/}/ ; \
 	done
 
 clean:
