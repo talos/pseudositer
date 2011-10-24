@@ -3,6 +3,11 @@
   */
 var $pseudo;
 
+/**
+  * Make sure the hash is clear before we start.
+  */
+//document.location.hash = '';
+
 /** 
   * Default jasmine-jquery fixtures directory makes more
   * sense for bigger projects, methinks.
@@ -58,18 +63,38 @@ var getRealPath = function( pseudoPath ) {
 };
 
 /**
-  * Load fixtures before each run.
+  * Determine whether pseudositer is still around.
+  *
+  * @return True if pseudositer still exists, false otherwise.
+  */
+var pseudositerExists = function( ) {
+	if( typeof $pseudo === 'undefined' || $pseudo === null ) {
+		return false;
+	}
+	if( typeof $pseudo.data('pseudositer') !== 'undefined' && $pseudo.data('pseudositer') !== null) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
+/**
+  * Load fixtures before each run, and make sure hash is clear.
   **/
 beforeEach(function() {
-	// Ensure that prior pseudositer is gone first.
-	// waitsFor(function() {
-	// 	return typeof $pseudo.data( 'pseudositer' ) === 'undefined' || $pseudo.data( 'pseudositer' ) === null;
-	// }, 3000, 'pseudositer to be destroyed');
-	
-	runs(function() {
-		setFixtures( $( '<div />' ).attr( 'id', 'pseudositer' ) );
-		$pseudo = $('#pseudositer');
-	});
+	if( pseudositerExists() ) {
+		$pseudo.data('pseudositer').destroy();
+		waitsForEvent( $pseudo, 'destroy.pseudositer', 1000 );
+		runs(function() {
+			$pseudo = sandbox();
+			document.location.hash = '';
+		});
+
+	} else {
+		$pseudo = sandbox();
+		document.location.hash = '';
+	}
+	waits(0); // TODO this performs some kind of synchronization between tests.  shouldn't be necessary.
 });
 
 /**
@@ -77,7 +102,7 @@ beforeEach(function() {
   */
 afterEach(function() {
 	runs(function() {
-		if( typeof $pseudo.data('pseudositer') !== 'undefined' && $pseudo.data('pseudositer') !== null) {
+		if( pseudositerExists() ) {
 			$pseudo.data('pseudositer').destroy();
 		}
 	});

@@ -6,7 +6,7 @@ describe('pseudopath "fixtures/deep/"', function() {
 			runs(function() {
 				$pseudo.pseudositer( pseudoPath, { recursion: true } );
 			});
-			waitsForEvent( $pseudo, 'doneUpdate.pseudositer', 1000 );
+			waitsForEvent( $pseudo, 'doneUpdate.pseudositer', 5000 );
 			runs(function() {
 				expect(document.location.hash).toEqual( '#/a/b/c/d/e/content.html' );
 			});
@@ -18,7 +18,7 @@ describe('pseudopath "fixtures/deep/"', function() {
 			runs(function() {
 				$pseudo.pseudositer( pseudoPath, { recursion: false } );
 			});
-			waitsForEvent( $pseudo, 'doneUpdate.pseudositer', 1000 );
+			waitsForEvent( $pseudo, 'doneUpdate.pseudositer', 5000 );
 			runs(function() {
 				expect(document.location.hash).toEqual( '#/' );
 			});
