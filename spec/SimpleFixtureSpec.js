@@ -219,7 +219,7 @@ describe('pseudopath "fixtures/simple/"', function() {
 					});
 				});
 				
-				xdescribe('not including the file type', function() {
+				describe('not including the file type', function() {
 
 					it('should leave the fragment alone', function() {
 						runs(function() {

@@ -1,7 +1,7 @@
 (function() {
 
   /*
-  Pseudositer 0.0.4 content management for the lazy
+  Pseudositer content management for the lazy
   
   kudos to coffee-plate https://github.com/pthrasher/coffee-plate
   

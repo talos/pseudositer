@@ -9,6 +9,16 @@ all:
 	uglifyjs lib/pseudositer/pseudositer.js > lib/pseudositer/pseudositer.min.js
 	uglifyjs lib/pseudositer/extensions/pseudositer.markdown.js > lib/pseudositer/extensions/pseudositer.markdown.min.js
 
+	@echo Generating templates...
+	rm -r `pwd`/samples/templates
+	mkdir `pwd`/samples/templates
+	for style in `ls samples/styles/` ; do \
+		mkdir `pwd`/samples/templates/$${style/%.css/} ; \
+		cp -R `pwd`/template-skeleton/* `pwd`/samples/templates/$${style/%.css/}/ ; \
+		mkdir `pwd`/samples/templates/$${style/%.css/}/css ; \
+		cp `pwd`/samples/styles/$$style `pwd`/samples/templates/$${style/%.css/}/css/pseudositer-stylesheet.css ; \
+	done
+
 clean:
 	@echo Cleaning lib/pseudositer...
 	rm -f lib/pseudositer/pseudositer.js

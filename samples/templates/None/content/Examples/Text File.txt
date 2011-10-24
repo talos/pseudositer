@@ -1,0 +1,3 @@
+Some plain text in here.
+
+Lives inside <pre>.
