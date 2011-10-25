@@ -7,6 +7,7 @@ $(document).ready(function() {
 	// Initialize pseudositer
 	$('#pseudositer').pseudositer( pseudoPath, {
 		recursion: true,
-		decodeUri: true
+		decodeUri: true,
+		stripSlashes: true
 	});
 });

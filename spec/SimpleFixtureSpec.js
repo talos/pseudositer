@@ -105,15 +105,8 @@ describe('pseudopath "fixtures/simple/"', function() {
 					document.location.hash = "/hello world.txt";
 					$pseudo.pseudositer( pseudoPath );
 				});
-				waitsForEvent( $pseudo, 'hideContent.pseudositer', 1000 );
-				runs(function() {
-					console.log($pseudo.find('.pseudositer-content') );
-					//expect( $pseudo.find('.pseudositer-content') ).toBeEmpty();
-					//expect( $pseudo.find('.pseudositer-content').children() ).not.toBeVisible();
-				});
 				waitsForEvent( $pseudo, 'doneUpdate.pseudositer', 1000 );
 				runs(function() {
-					console.log( $pseudo.find('.pseudositer-content').children().css( 'opacity' )  );
 					expect( $pseudo.find('.pseudositer-content').children().css( 'opacity' ) ).toBe('1');
 				});
 			});			
@@ -219,7 +212,7 @@ describe('pseudopath "fixtures/simple/"', function() {
 					});
 				});
 				
-				describe('not including the file type', function() {
+				xdescribe('not including the file type', function() {
 
 					it('should leave the fragment alone', function() {
 						runs(function() {
@@ -330,6 +323,34 @@ describe('pseudopath "fixtures/simple/"', function() {
 				
 			});
 		});
+		describe('when stripSlashes is false', function() {
+			it('displays a slash after directory names', function() {
+				runs(function() {
+					$pseudo.pseudositer( pseudoPath, { stripSlashes : false } );
+					waitsForEvent( $pseudo, 'doneUpdate.pseudositer', 1000 );
+					runs( function() {
+						expect( $pseudo.find('.pseudositer-index-0 a[href="#/directory/"]') ).toHaveText('directory/');
+					});
+				});
+				
+			});
+		});
+
+		describe('when stripSlashes is true', function() {
+			it('does not display a slash after directory names', function() {
+				runs(function() {
+					$pseudo.pseudositer( pseudoPath, { stripSlashes : true } );
+					waitsForEvent( $pseudo, 'doneUpdate.pseudositer', 1000 );
+					runs( function() {
+						expect( $pseudo.find('.pseudositer-index-0 a[href="#/directory/"]') ).toHaveText('directory');
+					});
+				});
+				
+				
+			});
+		});
+
+
     }); // when the page is reloaded
 
 	describe( 'when the value for recursion is changed', function() {
@@ -398,5 +419,6 @@ describe('pseudopath "fixtures/simple/"', function() {
 			});
 
 		});
+
 	});
 });

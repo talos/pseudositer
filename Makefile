@@ -1,7 +1,8 @@
-LIB_DIR=`pwd`/lib/pseudositer
-SRC_DIR=`pwd`/src
-TEMPLATES_DIR = `pwd`/samples/templates
-SKELETON_DIR = `pwd`/template-skeleton
+LIB_DIR=$(CURDIR)/lib/pseudositer
+SRC_DIR=$(CURDIR)/src
+TEMPLATES_DIR = $(CURDIR)/samples/templates
+SKELETON_DIR = $(CURDIR)/template-skeleton
+SKELETON_LIB_DIR = $(SKELETON_DIR)/lib/pseudositer
 
 all:
 	@echo Generating pseudositer javascript from coffee...
@@ -15,16 +16,21 @@ all:
 	uglifyjs $(LIB_DIR)/extensions/pseudositer.markdown.js > $(LIB_DIR)/extensions/pseudositer.markdown.min.js
 
 	@echo Generating templates...
-	rm -r $(TEMPLATES_DIR)
+	rm -rf $(SKELETON_LIB_DIR)
+	mkdir -p $(SKELETON_LIB_DIR)
+	cp -r $(LIB_DIR)/* $(SKELETON_LIB_DIR)/
+	rm -rf $(TEMPLATES_DIR)
 	mkdir $(TEMPLATES_DIR)
 	for style in `ls samples/styles/` ; do \
-		STYLE_PATH=`pwd`/samples/styles/$$style ; \
-		STYLE_TEMPLATE_DIR=$(TEMPLATES_DIR)/$${style/%.css/} ; \
+		STYLE_PATH=$(CURDIR)/samples/styles/$$style ; \
+		STYLE_NAME=$${style/%.css/} ; \
+		STYLE_TEMPLATE_DIR=$(TEMPLATES_DIR)/$$STYLE_NAME ; \
 		mkdir $$STYLE_TEMPLATE_DIR ; \
 		cp -R $(SKELETON_DIR)/* $$STYLE_TEMPLATE_DIR ; \
 		mkdir $$STYLE_TEMPLATE_DIR/css ; \
 		cp $$STYLE_PATH $$STYLE_TEMPLATE_DIR/css/pseudositer-stylesheet.css ; \
-		zip -r $$STYLE_TEMPLATE_DIR.zip $$STYLE_TEMPLATE_DIR/ ; \
+		cd $(TEMPLATES_DIR) ; \
+		zip -r $$STYLE_NAME.zip $$STYLE_NAME/ ; \
 	done
 
 clean:

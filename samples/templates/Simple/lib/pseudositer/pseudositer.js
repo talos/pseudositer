@@ -1,7 +1,7 @@
 (function() {
 
   /*
-  Pseudositer content management for the lazy
+  Pseudositer 0.0.4 content management for the lazy
   
   kudos to coffee-plate https://github.com/pthrasher/coffee-plate
   
@@ -536,12 +536,16 @@
           dfd.resolve();
         } else {
           $.get(getAjaxPath(indexPath), function(responseText) {
-            var $links, showExtension;
+            var $links, showExtension, stripSlashes;
             showExtension = _this.options.showExtension;
+            stripSlashes = _this.options.stripSlashes;
             $links = $(responseText).find(_this.options.linkSelector).addClass(linkClass).text(function(idx, oldValue) {
               var fullName;
               fullName = decodeURI($(this).attr('href'));
               if (showExtension === false) fullName = clipExtension(fullName);
+              if (stripSlashes === true && fullName.substr(fullName.length - 1) === '/') {
+                fullName = fullName.substr(0, fullName.length - 1);
+              }
               return fullName;
             }).attr('href', function(idx, oldValue) {
               if (oldValue.charAt(0) === '/') {
@@ -625,7 +629,8 @@
       timeout: 10000,
       recursion: false,
       showExtension: false,
-      decodeUri: false
+      decodeUri: false,
+      stripSlashes: false
     };
     $.pseudositer.defaultMap = {
       png: loadImage,

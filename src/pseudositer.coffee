@@ -846,6 +846,7 @@ and the paths to your javascript libraries as appropriate:
 
           # scope this here, because when we edit links we lose access to @
           showExtension = @options.showExtension
+          stripSlashes = @options.stripSlashes
 
           # hashify href tags, add class
           $links = $( responseText )
@@ -858,6 +859,11 @@ and the paths to your javascript libraries as appropriate:
               # Remove the extension if we're supposed to
               if showExtension is false
                 fullName = clipExtension fullName
+
+              # Remove the trailing slash if we're supposed to
+              if stripSlashes is true and fullName.substr( fullName.length - 1 ) is '/'
+                fullName = fullName.substr 0, fullName.length - 1
+
               fullName
             .attr 'href', ( idx, oldValue ) =>
               # use old value as hash if absolute
@@ -996,6 +1002,10 @@ and the paths to your javascript libraries as appropriate:
 
     # If decodeUri is true, links will be decoded.
     decodeUri : false
+
+    # If stripSlashes is true, the text of directory links will not include
+    # the trailing slash.
+    stripSlashes : false
 
   # Default map between file extensions and event handlers.
   # In addition to the event object, any callbacks
