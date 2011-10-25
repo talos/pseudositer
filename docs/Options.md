@@ -26,3 +26,9 @@ This option can be modified after initialization by using the [setRecursion](Met
 **default:** `false`
 
 Whether pseudositer should include file extensions in the text of links.  By default, a link to `Content.html` will be rendered as `Content`.
+- - -
+### <a name="stripSlashes">stripSlashes</a>
+
+**default:** `false`
+
+Whether pseudositer should strip trailing slashes from links to indexes.  Were this false, a link to `folder/` would read `folder/`.  Were it true, the link would read 'folder'.
