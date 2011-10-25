@@ -31,4 +31,4 @@ Whether pseudositer should include file extensions in the text of links.  By def
 
 **default:** `false`
 
-Whether pseudositer should strip trailing slashes from links to indexes.  Were this false, a link to `folder/` would read `folder/`.  Were it true, the link would read 'folder'.
+Whether pseudositer should strip trailing slashes from links to indexes.  Were this false, a link to `folder/` would read `folder/`.  Were it true, the link would read `folder`.
