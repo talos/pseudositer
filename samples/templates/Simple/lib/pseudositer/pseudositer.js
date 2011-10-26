@@ -196,7 +196,6 @@
       return dfd.promise();
     };
     download = function(pathToFile) {
-      window.location = pathToFile;
       return new $.Deferred().resolve();
     };
     /*
@@ -535,34 +534,34 @@
         if (_this.cache[indexPath] != null) {
           dfd.resolve();
         } else {
-          $.get(getAjaxPath(indexPath), function(responseText) {
-            var $links, showExtension, stripSlashes;
+          $.getJSON(getAjaxPath(indexPath + _this.options.indexFileName), function(links) {
+            var $dummy, decodeUri, showExtension, stripSlashes;
             showExtension = _this.options.showExtension;
             stripSlashes = _this.options.stripSlashes;
-            $links = $(responseText).find(_this.options.linkSelector).addClass(linkClass).text(function(idx, oldValue) {
-              var fullName;
-              fullName = decodeURI($(this).attr('href'));
-              if (showExtension === false) fullName = clipExtension(fullName);
-              if (stripSlashes === true && fullName.substr(fullName.length - 1) === '/') {
-                fullName = fullName.substr(0, fullName.length - 1);
-              }
-              return fullName;
-            }).attr('href', function(idx, oldValue) {
-              if (oldValue.charAt(0) === '/') {
-                if (_this.options.decodeUri === true) {
-                  return '#' + decodeURI(oldValue);
+            decodeUri = _this.options.decodeUri;
+            $dummy = $('<div />');
+            $.each(links, function() {
+              var $link, href, text;
+              if (this.charAt(0) === '/') {
+                if (decodeUri === true) {
+                  href = '#' + decodeURI(this);
                 } else {
-                  return '#' + oldValue;
+                  href = '#' + this;
                 }
               } else {
-                if (_this.options.decodeUri === true) {
-                  return '#' + decodeURI(indexPath + oldValue);
+                if (decodeUri === true) {
+                  href = '#' + decodeURI(indexPath + this);
                 } else {
-                  return '#' + indexPath + oldValue;
+                  href = '#' + indexPath + this;
                 }
               }
+              if (showExtension === false) text = clipExtension(this);
+              if (stripSlashes === true && this.substr(this.length - 1) === '/') {
+                text = this.substr(0, this.length - 1);
+              }
+              return $link = $('<a />').attr('href', href).addClass(linkClass).text(text).appendTo($dummy);
             });
-            _this.cache[indexPath] = $links;
+            _this.cache[indexPath] = $dummy.children();
             return dfd.resolve();
           }).fail(function() {
             return dfd.reject("Could not load index page for " + indexPath);
@@ -630,7 +629,8 @@
       recursion: false,
       showExtension: false,
       decodeUri: false,
-      stripSlashes: false
+      stripSlashes: false,
+      indexFileName: 'index.json'
     };
     $.pseudositer.defaultMap = {
       png: loadImage,

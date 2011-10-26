@@ -327,7 +327,7 @@ and the paths to your javascript libraries as appropriate:
   #
   # @param pathToFile the path to the file
   download = ( pathToFile ) ->
-    window.location = pathToFile
+    #  window.location = pathToFile
     new $.Deferred().resolve()
     #new $.Deferred().resolve $( '<a />' ).text( pathToFile ).attr 'href', pathToFile
 
@@ -842,44 +842,46 @@ and the paths to your javascript libraries as appropriate:
 
       # otherwise, load the index and resolve once that's done
       else
-        $.get( getAjaxPath( indexPath ), ( responseText ) =>
+        $.getJSON( getAjaxPath( indexPath + @options.indexFileName ), ( links ) =>
 
           # scope this here, because when we edit links we lose access to @
           showExtension = @options.showExtension
           stripSlashes = @options.stripSlashes
+          decodeUri = @options.decodeUri
+
+          $dummy = $('<div />')
 
           # hashify href tags, add class
-          $links = $( responseText )
-            .find( @options.linkSelector )
-            .addClass( linkClass )
-            .text ( idx, oldValue ) ->
-              # the index may clip the full name, so use the decoded attr
-              fullName = decodeURI $( this ).attr 'href'
+          $.each links, ->
 
-              # Remove the extension if we're supposed to
-              if showExtension is false
-                fullName = clipExtension fullName
-
-              # Remove the trailing slash if we're supposed to
-              if stripSlashes is true and fullName.substr( fullName.length - 1 ) is '/'
-                fullName = fullName.substr 0, fullName.length - 1
-
-              fullName
-            .attr 'href', ( idx, oldValue ) =>
-              # use old value as hash if absolute
-              if oldValue.charAt( 0 ) is '/'
-                if @options.decodeUri is true
-                  '#' + decodeURI( oldValue )
-                else
-                  '#' + oldValue
-              # resolve against index path otherwise
+            # Determine href
+            if this.charAt( 0 ) is '/'
+              if decodeUri is true
+                href = '#' + decodeURI( this )
               else
-                if @options.decodeUri is true
-                  '#' + decodeURI( indexPath + oldValue )
-                else
-                  '#' + indexPath + oldValue
+                href = '#' + this
+            # resolve against index path otherwise
+            else
+              if decodeUri is true
+                href = '#' + decodeURI( indexPath + this )
+              else
+                href = '#' + indexPath + this
 
-          @cache[ indexPath ] = $links
+            # Determine text value
+            # Remove the extension if we're supposed to
+            if showExtension is false
+              text = clipExtension this
+
+            # Remove the trailing slash if we're supposed to
+            if stripSlashes is true and this.substr( this.length - 1 ) is '/'
+              text = this.substr 0, this.length - 1
+
+            $link = $('<a />').attr( 'href', href )
+              .addClass( linkClass )
+              .text( text )
+              .appendTo( $dummy )
+
+          @cache[ indexPath ] = $dummy.children()
 
           # only resolve once the cache is actually updated
           dfd.resolve()
@@ -1006,6 +1008,9 @@ and the paths to your javascript libraries as appropriate:
     # If stripSlashes is true, the text of directory links will not include
     # the trailing slash.
     stripSlashes : false
+
+    # The filename of index files
+    indexFileName : 'index.json'
 
   # Default map between file extensions and event handlers.
   # In addition to the event object, any callbacks
