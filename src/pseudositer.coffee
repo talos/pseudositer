@@ -1,5 +1,5 @@
 ###
-Pseudositer 0.0.4 content management for the lazy
+Pseudositer :: content management for the lazy
 
 kudos to coffee-plate https://github.com/pthrasher/coffee-plate
 
@@ -28,7 +28,7 @@ and the paths to your javascript libraries as appropriate:
    </script>
   </head>
   <body>
-    <div id="pseudositer" />
+    <div id="pseudositer"></div>
   </body>
 </html>
 ###
@@ -65,7 +65,7 @@ and the paths to your javascript libraries as appropriate:
 
   ###
   #
-  # Static class names for default handlers
+  # Static class names
   #
   ###
   contentClass = 'pseudositer-content'
@@ -150,12 +150,12 @@ and the paths to your javascript libraries as appropriate:
 
     if path.charAt( path.length - 1 ) isnt '/' then true else false
 
-  # Obtain the lowercase file type suffix (after a period)
+  # Obtain the lowercase file type extension (after a period)
   #
   # @param path the path to the file
   #
-  # @return {String} the lowercase suffix, or null if there is none.
-  getSuffix = ( path ) ->
+  # @return {String} the lowercase extension, or null if there is none.
+  getExtension = ( path ) ->
     splitBySlash = path.split '/'
     fileName = splitBySlash[ splitBySlash.length - 1 ]
 
@@ -227,32 +227,6 @@ and the paths to your javascript libraries as appropriate:
   getClassForPath = ( path ) ->
 
     path.replace(/[^A-Za-z0-9]/g, '-')
-
-  # Remove the extension from a path.  Does not modify paths to indices.
-  #
-  # Example:
-  #   clipExtension( '/path/to/file.html' ) -> '/path/to/file'
-  #   clipExtension( 'file.html' ) -> 'file'
-  #   clipExtension( '/path/to/index/' ) -> '/path/to/index/'
-  #
-  # @param path the {String} path to clip the extension from
-  #
-  # @return {String} the path without the file extension
-  clipExtension = ( path ) ->
-
-    if isPathToFile path
-      pathAry = path.split '/'
-
-      fileNameAry = pathAry[ pathAry.length - 1 ].split '.'
-      fileNameWithoutExtension = fileNameAry[ 0...fileNameAry.length - 1 ].join '.'
-
-      pathAry = pathAry[ 0...pathAry.length - 1 ]
-      pathAry.push fileNameWithoutExtension
-
-      pathAry.join '/'
-
-    else
-      path
 
   # Remove existing selected link classes within this path's level, add selected link
   # class to link for supplied path
@@ -328,7 +302,7 @@ and the paths to your javascript libraries as appropriate:
   #
   # @param pathToFile the path to the file
   download = ( pathToFile ) ->
-    #  window.location = pathToFile
+    window.location = pathToFile
     new $.Deferred().resolve()
     #new $.Deferred().resolve $( '<a />' ).text( pathToFile ).attr 'href', pathToFile
 
@@ -346,6 +320,27 @@ and the paths to your javascript libraries as appropriate:
     # For each link, append it inside an <li />
     $links.each -> $index.append $( '<li />' ).append @
     $index
+
+  # Pull the links out of HTML response text from an Apache autoindex, return them
+  # as a vanilla array.
+  #
+  # @param responseText HTML response text from an Apache autoindex.
+  #
+  # @returns {Array} an array of the links
+  readApacheIndex = ( responseText ) ->
+    linkSelector = 'a:not([href^="?"],[href^="/"],[href^="../"])'
+    links = []
+    # Search through the response text for relevant links, push the href onto links
+    $( responseText ).find( linkSelector ).each -> links.push $( @ ).attr 'href'
+    links
+
+  # Pull the links out of a JSON array.
+  #
+  # @param responseText A serialized JSON array of links.
+  #
+  # @returns {Array} an array of the links
+  readJSONIndex = ( responseText ) ->
+    $.parseJSON( responseText )
 
   ###
   #
@@ -575,6 +570,11 @@ and the paths to your javascript libraries as appropriate:
       @options = $.extend {}, $.pseudositer.defaultOptions, options
       @map     = $.extend {}, $.pseudositer.defaultMap, @options.map
 
+      @readIndex = switch @options.index
+        when 'apache' then readApacheIndex
+        when 'json'   then readJSONIndex
+        else throw @options.index + ' is not recognized index reader'
+
       @visiblePath = getCurrentPath()
       @logging = @options.logging
 
@@ -589,7 +589,7 @@ and the paths to your javascript libraries as appropriate:
         @realPath = hiddenPath
       else
         # eliminate current file name when constructing real path
-        if getSuffix( @visiblePath )?
+        if getExtension( @visiblePath )?
           split = @visiblePath.split( '/' )
           @realPath = split[ 0...split.length - 1 ].join( '/' ) + '/' + hiddenPath
         else # make sure that relative hidden path is joined without a redundant slash to visible path
@@ -694,6 +694,35 @@ and the paths to your javascript libraries as appropriate:
 
       # path should start with '/'
       @realPath + path.substr 1
+
+    # Remove the extension from a path.  Does not modify paths to indices.
+    # Only removes paths that are handled in @map
+    #
+    # Example:
+    #   clipExtension( '/path/to/file.html' ) -> '/path/to/file'
+    #   clipExtension( 'file.html' ) -> 'file'
+    #   clipExtension( '/path/to/index/' ) -> '/path/to/index/'
+    #   clipExtension( 'file.mystery' ) -> 'file.mystery' # Provided there is no handler in @map for 'mystery'
+    #
+    # @param path the {String} path to clip the extension from
+    #
+    # @return {String} the path without the file extension
+    clipExtension = ( path ) =>
+
+      if isPathToFile path
+
+        pathAry = path.split( '/' )
+
+        fileNameAry = pathAry[ pathAry.length - 1 ].split '.'
+        extension = getExtension path
+
+        # clip extension if it's in map
+        if extension of @map
+          fileNameAry[ 0...fileNameAry.length - 1 ].join '.'
+        else
+          path
+      else
+        path
 
     # Update browser to display the view associated with the current fragment.
     # Will load, then change fragment (which will call {#update()} again) if
@@ -865,39 +894,31 @@ and the paths to your javascript libraries as appropriate:
 
       # otherwise, load the index and resolve once that's done
       else
-        $.getJSON( getAjaxPath( indexPath + @options.indexFileName ), ( links ) =>
+        indexPage = indexPath + @options.indexFileName
 
-          # scope this here, because when we edit links we lose access to @
-          showExtension = @options.showExtension
-          stripSlashes = @options.stripSlashes
-          decodeUri = @options.decodeUri
-
+        $.ajax(
+          url        : getAjaxPath( indexPage )
+          dataType   : 'text'
+          dataFilter : @readIndex
+        ).done( ( links ) =>
           $dummy = $('<div />')
 
           # hashify href tags, add class
-          $.each links, ->
-
+          $.each links, ( idx, link ) =>
             # Determine href
-            if this.charAt( 0 ) is '/'
-              if decodeUri is true
-                href = '#' + decodeURI( this )
-              else
-                href = '#' + this
-            # resolve against index path otherwise
-            else
-              if decodeUri is true
-                href = '#' + decodeURI( indexPath + this )
-              else
-                href = '#' + indexPath + this
+            # Keep absolute links absolute
+            href = if link.charAt( 0 )   is '/'  then link else indexPath + link
+            # Decode URI if option is set
+            href = if @options.decodeUri is true then decodeURI( href ) else href
+            href = '#' + href
 
             # Determine text value
-            # Remove the extension if we're supposed to
-            if showExtension is false
-              text = clipExtension this
-
-            # Remove the trailing slash if we're supposed to
-            if stripSlashes is true and this.substr( this.length - 1 ) is '/'
-              text = this.substr 0, this.length - 1
+            if link.charAt( link.length - 1 ) is '/' # for folders
+              text = if @options.stripSlashes is true then link.substr 0, link.length - 1 else link
+            else # for files
+              # Remove the extension if we're supposed to
+              text = if @options.showExtension is true then link else clipExtension link
+            text = decodeURI( text ) # always decode
 
             $link = $('<a />').attr( 'href', href )
               .addClass( linkClass )
@@ -908,8 +929,9 @@ and the paths to your javascript libraries as appropriate:
 
           # only resolve once the cache is actually updated
           dfd.resolve()
-        ) #.done( () -> dfd.resolve() )
-         .fail( () -> dfd.reject "Could not load index page for #{indexPath}" )
+        ).fail( ( failObj ) =>
+          dfd.reject "Could not load index page for #{indexPath} at #{indexPage}"
+        )
 
       dfd.promise()
 
@@ -922,11 +944,11 @@ and the paths to your javascript libraries as appropriate:
     loadContent = ( pathToContent ) =>
       if @logging then log "loadContent( #{pathToContent} )"
 
-      suffix = getSuffix pathToContent
+      extension = getExtension pathToContent
       loadedIntoCache = new $.Deferred()
 
       # Use the handler in @map if we have one, default otherwise
-      handler = if @map[ suffix ]? then @map[ suffix ] else @map[ '' ]
+      handler = if @map[ extension ]? then @map[ extension ] else @map[ '' ]
 
       # handler should return a promise
       promise = handler getAjaxPath( pathToContent )
@@ -1022,7 +1044,8 @@ and the paths to your javascript libraries as appropriate:
     # or an empty directory is found.
     recursion  : false
 
-    # If showExtension is true, links to content display their extension
+    # If showExtension is true, links to all content display their extension.
+    # Otherwise, any content with a handler attached hides its extension.
     showExtension : false
 
     # If decodeUri is true, links will be decoded.
@@ -1032,8 +1055,11 @@ and the paths to your javascript libraries as appropriate:
     # the trailing slash.
     stripSlashes : false
 
-    # The filename of index files
+    # The filename of index files.  If blank, will look at directories.
     indexFileName : 'index.json'
+
+    # Function to read the index
+    index : 'json'
 
   # Default map between file extensions and event handlers.
   # In addition to the event object, any callbacks

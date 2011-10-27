@@ -1,7 +1,7 @@
 (function() {
 
   /*
-  Pseudositer 0.0.4 content management for the lazy
+  Pseudositer :: content management for the lazy
   
   kudos to coffee-plate https://github.com/pthrasher/coffee-plate
   
@@ -30,7 +30,7 @@
      </script>
     </head>
     <body>
-      <div id="pseudositer" />
+      <div id="pseudositer"></div>
     </body>
   </html>
   */
@@ -43,11 +43,11 @@
       # Static constant events
       #
     */
-    var clipExtension, contentClass, download, errorClass, events, getClassForPath, getContentContainer, getCurrentFragment, getCurrentPath, getIndexClassForLevel, getIndexContainer, getIndexLevel, getIndexTrail, getPathDepth, getSuffix, hideContent, hideError, hideIndex, hideLoadingNotice, indexClass, indexContainerClass, isPathToFile, linkClass, loadHtml, loadImage, loadText, loadingClass, log, selectLink, selectedLinkClass, showContent, showError, showIndex, showLoadingNotice, staleClass, synthesizeIndex, updateLinkClasses;
+    var contentClass, download, errorClass, events, getClassForPath, getContentContainer, getCurrentFragment, getCurrentPath, getExtension, getIndexClassForLevel, getIndexContainer, getIndexLevel, getIndexTrail, getPathDepth, hideContent, hideError, hideIndex, hideLoadingNotice, indexClass, indexContainerClass, isPathToFile, linkClass, loadHtml, loadImage, loadText, loadingClass, log, readApacheIndex, readJSONIndex, selectLink, selectedLinkClass, showContent, showError, showIndex, showLoadingNotice, staleClass, synthesizeIndex, updateLinkClasses;
     events = ['startUpdate', 'doneUpdate', 'startLoading', 'failedLoading', 'doneLoading', 'alwaysLoading', 'hideIndex', 'showIndex', 'selectLink', 'hideContent', 'showContent', 'showError', 'destroy'];
     /*
       #
-      # Static class names for default handlers
+      # Static class names
       #
     */
     contentClass = 'pseudositer-content';
@@ -97,7 +97,7 @@
         return false;
       }
     };
-    getSuffix = function(path) {
+    getExtension = function(path) {
       var fileName, splitByDot, splitBySlash;
       splitBySlash = path.split('/');
       fileName = splitBySlash[splitBySlash.length - 1];
@@ -139,19 +139,6 @@
     };
     getClassForPath = function(path) {
       return path.replace(/[^A-Za-z0-9]/g, '-');
-    };
-    clipExtension = function(path) {
-      var fileNameAry, fileNameWithoutExtension, pathAry;
-      if (isPathToFile(path)) {
-        pathAry = path.split('/');
-        fileNameAry = pathAry[pathAry.length - 1].split('.');
-        fileNameWithoutExtension = fileNameAry.slice(0, (fileNameAry.length - 1)).join('.');
-        pathAry = pathAry.slice(0, (pathAry.length - 1));
-        pathAry.push(fileNameWithoutExtension);
-        return pathAry.join('/');
-      } else {
-        return path;
-      }
     };
     updateLinkClasses = function(path) {
       var $link;
@@ -196,6 +183,7 @@
       return dfd.promise();
     };
     download = function(pathToFile) {
+      window.location = pathToFile;
       return new $.Deferred().resolve();
     };
     synthesizeIndex = function(indexLevel, $links) {
@@ -206,6 +194,18 @@
         return $index.append($('<li />').append(this));
       });
       return $index;
+    };
+    readApacheIndex = function(responseText) {
+      var linkSelector, links;
+      linkSelector = 'a:not([href^="?"],[href^="/"],[href^="../"])';
+      links = [];
+      $(responseText).find(linkSelector).each(function() {
+        return links.push($(this).attr('href'));
+      });
+      return links;
+    };
+    readJSONIndex = function(responseText) {
+      return $.parseJSON(responseText);
     };
     /*
       #
@@ -340,7 +340,7 @@
       #
     */
     $.pseudositer = function(el, hiddenPath, options) {
-      var getAjaxPath, load, loadContent, loadIndex, redirectToFile, showIndices, trigger, update;
+      var clipExtension, getAjaxPath, load, loadContent, loadIndex, redirectToFile, showIndices, trigger, update;
       var _this = this;
       this.$el = $(el);
       this.$el.data("pseudositer", this);
@@ -349,6 +349,16 @@
         var event, handler, split, _i, _j, _len, _len2, _ref;
         _this.options = $.extend({}, $.pseudositer.defaultOptions, options);
         _this.map = $.extend({}, $.pseudositer.defaultMap, _this.options.map);
+        _this.readIndex = (function() {
+          switch (this.options.index) {
+            case 'apache':
+              return readApacheIndex;
+            case 'json':
+              return readJSONIndex;
+            default:
+              throw this.options.index + ' is not recognized index reader';
+          }
+        }).call(_this);
         _this.visiblePath = getCurrentPath();
         _this.logging = _this.options.logging;
         _this.updating = new $.Deferred().resolve().promise();
@@ -358,7 +368,7 @@
         if (hiddenPath.charAt(0) === '/') {
           _this.realPath = hiddenPath;
         } else {
-          if (getSuffix(_this.visiblePath) != null) {
+          if (getExtension(_this.visiblePath) != null) {
             split = _this.visiblePath.split('/');
             _this.realPath = split.slice(0, (split.length - 1)).join('/') + '/' + hiddenPath;
           } else {
@@ -429,6 +439,21 @@
       getAjaxPath = function(path) {
         if (_this.logging) log("getAjaxPath( " + path + " )");
         return _this.realPath + path.substr(1);
+      };
+      clipExtension = function(path) {
+        var extension, fileNameAry, pathAry;
+        if (isPathToFile(path)) {
+          pathAry = path.split('/');
+          fileNameAry = pathAry[pathAry.length - 1].split('.');
+          extension = getExtension(path);
+          if (extension in _this.map) {
+            return fileNameAry.slice(0, (fileNameAry.length - 1)).join('.');
+          } else {
+            return path;
+          }
+        } else {
+          return path;
+        }
       };
       update = function() {
         var path, updateDfd;
@@ -534,53 +559,47 @@
         return _this;
       };
       loadIndex = function(indexPath) {
-        var dfd;
+        var dfd, indexPage;
         if (_this.logging) log("loadIndex( " + indexPath + " )");
         dfd = new $.Deferred();
         if (_this.cache[indexPath] != null) {
           dfd.resolve();
         } else {
-          $.getJSON(getAjaxPath(indexPath + _this.options.indexFileName), function(links) {
-            var $dummy, decodeUri, showExtension, stripSlashes;
-            showExtension = _this.options.showExtension;
-            stripSlashes = _this.options.stripSlashes;
-            decodeUri = _this.options.decodeUri;
+          indexPage = indexPath + _this.options.indexFileName;
+          $.ajax({
+            url: getAjaxPath(indexPage),
+            dataType: 'text',
+            dataFilter: _this.readIndex
+          }).done(function(links) {
+            var $dummy;
             $dummy = $('<div />');
-            $.each(links, function() {
+            $.each(links, function(idx, link) {
               var $link, href, text;
-              if (this.charAt(0) === '/') {
-                if (decodeUri === true) {
-                  href = '#' + decodeURI(this);
-                } else {
-                  href = '#' + this;
-                }
+              href = link.charAt(0) === '/' ? link : indexPath + link;
+              href = _this.options.decodeUri === true ? decodeURI(href) : href;
+              href = '#' + href;
+              if (link.charAt(link.length - 1) === '/') {
+                text = _this.options.stripSlashes === true ? link.substr(0, link.length - 1) : link;
               } else {
-                if (decodeUri === true) {
-                  href = '#' + decodeURI(indexPath + this);
-                } else {
-                  href = '#' + indexPath + this;
-                }
+                text = _this.options.showExtension === true ? link : clipExtension(link);
               }
-              if (showExtension === false) text = clipExtension(this);
-              if (stripSlashes === true && this.substr(this.length - 1) === '/') {
-                text = this.substr(0, this.length - 1);
-              }
+              text = decodeURI(text);
               return $link = $('<a />').attr('href', href).addClass(linkClass).text(text).appendTo($dummy);
             });
             _this.cache[indexPath] = $dummy.children();
             return dfd.resolve();
-          }).fail(function() {
-            return dfd.reject("Could not load index page for " + indexPath);
+          }).fail(function(failObj) {
+            return dfd.reject("Could not load index page for " + indexPath + " at " + indexPage);
           });
         }
         return dfd.promise();
       };
       loadContent = function(pathToContent) {
-        var handler, loadedIntoCache, promise, suffix;
+        var extension, handler, loadedIntoCache, promise;
         if (_this.logging) log("loadContent( " + pathToContent + " )");
-        suffix = getSuffix(pathToContent);
+        extension = getExtension(pathToContent);
         loadedIntoCache = new $.Deferred();
-        handler = _this.map[suffix] != null ? _this.map[suffix] : _this.map[''];
+        handler = _this.map[extension] != null ? _this.map[extension] : _this.map[''];
         promise = handler(getAjaxPath(pathToContent));
         promise.done(function($content) {
           _this.cache[pathToContent] = $content;
@@ -636,7 +655,8 @@
       showExtension: false,
       decodeUri: false,
       stripSlashes: false,
-      indexFileName: 'index.json'
+      indexFileName: 'index.json',
+      index: 'json'
     };
     $.pseudositer.defaultMap = {
       png: loadImage,
