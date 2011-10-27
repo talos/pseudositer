@@ -399,18 +399,20 @@ and the paths to your javascript libraries as appropriate:
     # pipe each hide onto this
     hidePipeline = new $.Deferred().resolve()
 
-    trails = getIndexTrail path
     # Find our selected link
+    # It's possible for hideIndex to be called before selectedLink exists, so look
+    # for the most specific existing index
     $selectedLink = $( '.' + linkClass + '[href="#' + path + '"]')
+    if $selectedLink.length == 0
+      trails = getIndexTrail( path ).reverse() # check last first
+      for trail in trails
+        $selectedLink = $( '.' + linkClass + '[href="#' + trail + '"]')
+        break if $selectedLink.length > 0
 
     # Find its siblings descendents
     $cousins = $selectedLink.parents( 'li' ).siblings().find( '.' + indexClass )
     # Find any opened indexes deeper inside the selected list item
     $grandkids = $selectedLink.siblings( '.' + indexClass ).find( '.' + indexClass )
-
-    # log $selectedLink
-    # log $cousins
-    # log $grandkids
 
     # Hide 'em
     $.merge( $cousins, $grandkids ).each ->
@@ -1034,7 +1036,7 @@ and the paths to your javascript libraries as appropriate:
     destroy     : [ hideLoadingNotice, hideError ]
 
     # Whether to log function calls
-    logging     : false
+    logging : false
 
     # How many milliseconds to wait between the start of loading and
     # when loading is resolved.

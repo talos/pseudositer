@@ -235,11 +235,18 @@
       return;
     };
     hideIndex = function(evt, dfd, path) {
-      var $cousins, $grandkids, $selectedLink, hidePipeline, trails;
+      var $cousins, $grandkids, $selectedLink, hidePipeline, trail, trails, _i, _len;
       if (this.logging) log("hideIndex( " + dfd + ", " + path + " )");
       hidePipeline = new $.Deferred().resolve();
-      trails = getIndexTrail(path);
       $selectedLink = $('.' + linkClass + '[href="#' + path + '"]');
+      if ($selectedLink.length === 0) {
+        trails = getIndexTrail(path).reverse();
+        for (_i = 0, _len = trails.length; _i < _len; _i++) {
+          trail = trails[_i];
+          $selectedLink = $('.' + linkClass + '[href="#' + trail + '"]');
+          if ($selectedLink.length > 0) break;
+        }
+      }
       $cousins = $selectedLink.parents('li').siblings().find('.' + indexClass);
       $grandkids = $selectedLink.siblings('.' + indexClass).find('.' + indexClass);
       $.merge($cousins, $grandkids).each(function() {
