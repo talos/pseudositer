@@ -43,7 +43,7 @@
       # Static constant events
       #
     */
-    var contentClass, download, errorClass, events, getClassForPath, getContentContainer, getCurrentFragment, getCurrentPath, getExtension, getIndexClassForLevel, getIndexContainer, getIndexLevel, getIndexTrail, getPathDepth, hideContent, hideError, hideIndex, hideLoadingNotice, indexClass, indexContainerClass, isPathToFile, linkClass, loadHtml, loadImage, loadText, loadingClass, log, readApacheIndex, readJSONIndex, selectLink, selectedLinkClass, showContent, showError, showIndex, showLoadingNotice, staleClass, synthesizeIndex, updateLinkClasses;
+    var contentClass, download, errorClass, events, getClassForPath, getContentContainer, getCurrentFragment, getCurrentPath, getExtension, getIndexClassForLevel, getIndexContainer, getIndexLevel, getIndexTrail, getPathDepth, hideContent, hideError, hideIndex, hideLoadingNotice, indexClass, indexContainerClass, isPathToFile, linkClass, loadHtml, loadImage, loadText, loadingClass, log, readAutoindex, readJSONIndex, selectLink, selectedLinkClass, showContent, showError, showIndex, showLoadingNotice, staleClass, synthesizeIndex, updateLinkClasses;
     events = ['startUpdate', 'doneUpdate', 'startLoading', 'failedLoading', 'doneLoading', 'alwaysLoading', 'hideIndex', 'showIndex', 'selectLink', 'hideContent', 'showContent', 'showError', 'destroy'];
     /*
       #
@@ -195,7 +195,7 @@
       });
       return $index;
     };
-    readApacheIndex = function(responseText) {
+    readAutoindex = function(responseText) {
       var linkSelector, links;
       linkSelector = 'a:not([href^="?"],[href^="/"],[href^="../"])';
       links = [];
@@ -351,8 +351,8 @@
         _this.map = $.extend({}, $.pseudositer.defaultMap, _this.options.map);
         _this.readIndex = (function() {
           switch (this.options.index) {
-            case 'apache':
-              return readApacheIndex;
+            case 'autoindex':
+              return readAutoindex;
             case 'json':
               return readJSONIndex;
             default:
@@ -655,8 +655,8 @@
       showExtension: false,
       decodeUri: false,
       stripSlashes: false,
-      indexFileName: 'index.json',
-      index: 'json'
+      indexFileName: '',
+      index: 'autoindex'
     };
     $.pseudositer.defaultMap = {
       png: loadImage,
