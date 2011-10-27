@@ -43,8 +43,8 @@
       # Static constant events
       #
     */
-    var clipExtension, contentClass, createIndex, destroyIndex, download, errorClass, events, getClassForPath, getContentContainer, getCurrentFragment, getCurrentPath, getIndexClassForLevel, getIndexContainer, getIndexLevel, getIndexTrail, getPathDepth, getSuffix, hideContent, hideError, hideLoadingNotice, indexClass, indexContainerClass, isPathToFile, linkClass, loadHtml, loadImage, loadText, loadingClass, log, selectLink, selectedLinkClass, showContent, showError, showLoadingNotice, staleClass, updateLinkClasses;
-    events = ['startUpdate', 'doneUpdate', 'startLoading', 'failedLoading', 'doneLoading', 'alwaysLoading', 'destroyIndex', 'createIndex', 'selectLink', 'hideContent', 'showContent', 'showError', 'destroy'];
+    var clipExtension, contentClass, download, errorClass, events, getClassForPath, getContentContainer, getCurrentFragment, getCurrentPath, getIndexClassForLevel, getIndexContainer, getIndexLevel, getIndexTrail, getPathDepth, getSuffix, hideContent, hideError, hideIndex, hideLoadingNotice, indexClass, indexContainerClass, isPathToFile, linkClass, loadHtml, loadImage, loadText, loadingClass, log, selectLink, selectedLinkClass, showContent, showError, showIndex, showLoadingNotice, staleClass, synthesizeIndex, updateLinkClasses;
+    events = ['startUpdate', 'doneUpdate', 'startLoading', 'failedLoading', 'doneLoading', 'alwaysLoading', 'hideIndex', 'showIndex', 'selectLink', 'hideContent', 'showContent', 'showError', 'destroy'];
     /*
       #
       # Static class names for default handlers
@@ -156,7 +156,7 @@
     updateLinkClasses = function(path) {
       var $link;
       $link = $("." + linkClass + "[href=\"\#" + path + "\"]");
-      $link.siblings("." + linkClass).removeClass(selectedLinkClass);
+      $link.parent().siblings().find("." + linkClass).removeClass(selectedLinkClass);
       return $link.addClass(selectedLinkClass);
     };
     loadImage = function(pathToImage) {
@@ -198,6 +198,15 @@
     download = function(pathToFile) {
       return new $.Deferred().resolve();
     };
+    synthesizeIndex = function(indexLevel, $links) {
+      var $index, levelClass;
+      levelClass = getIndexClassForLevel(indexLevel);
+      $index = $('<ul />').addClass(indexClass + ' ' + levelClass).hide();
+      $links.each(function() {
+        return $index.append($('<li />').append(this));
+      });
+      return $index;
+    };
     /*
       #
       # Default handlers -- these are all called with the pseudositer object
@@ -225,58 +234,55 @@
       });
       return;
     };
-    destroyIndex = function(evt, dfd, aboveIndexLevel) {
-      var destroyed;
-      if (this.logging) {
-        log("destroyIndex( " + dfd + ", " + aboveIndexLevel + " )");
-      }
-      destroyed = new $.Deferred().resolve();
-      $('.' + indexClass).each(function(idx, elem) {
-        var $index, idxDestroy;
-        $index = $(elem);
-        if (getIndexLevel($index) > aboveIndexLevel) {
-          idxDestroy = new $.Deferred(function(idxDestroy) {
-            return $index.fadeOut('fast', function() {
-              return idxDestroy.resolve();
-            });
+    hideIndex = function(evt, dfd, path) {
+      var $cousins, $grandkids, $selectedLink, hidePipeline, trails;
+      if (this.logging) log("hideIndex( " + dfd + ", " + path + " )");
+      hidePipeline = new $.Deferred().resolve();
+      trails = getIndexTrail(path);
+      $selectedLink = $('.' + linkClass + '[href="#' + path + '"]');
+      $cousins = $selectedLink.parents('li').siblings().find('.' + indexClass);
+      $grandkids = $selectedLink.siblings('.' + indexClass).find('.' + indexClass);
+      $.merge($cousins, $grandkids).each(function() {
+        var $elem, hidden;
+        $elem = $(this);
+        hidden = new $.Deferred(function(hidden) {
+          return $elem.fadeOut('fast', function() {
+            return hidden.resolve();
           });
-          return destroyed = destroyed.pipe(function() {
-            return idxDestroy;
-          });
-        }
+        });
+        return hidePipeline = hidePipeline.pipe(function() {
+          return hidden;
+        });
       });
-      destroyed.done(function() {
+      hidePipeline.done(function() {
         return dfd.resolve();
       });
       return;
     };
-    createIndex = function(evt, dfd, path, $links) {
-      var $index, indexLevel, levelClass, prevPath, showIndex;
+    showIndex = function(evt, dfd, path, $links) {
+      var $index, $link, indexLevel;
       if (this.logging) {
-        log("createIndex( " + dfd + ", " + path + ", " + $links + " )");
+        log("showIndex( " + dfd + ", " + path + ", " + $links + " )");
       }
       indexLevel = path.split('/').length - 2;
-      levelClass = getIndexClassForLevel(indexLevel);
-      $index = $('.' + levelClass);
-      if ($index.length === 0) {
-        $index = $('<div />').addClass(indexClass + ' ' + levelClass).hide();
-        getIndexContainer(this).append($index);
-      }
-      if (!$index.data('pseudositer')) $index.data('pseudositer', {});
-      prevPath = $index.data('pseudositer').path;
-      showIndex = new $.Deferred().done(function() {
-        return $index.fadeIn('fast', function() {
-          return dfd.resolve();
-        });
-      });
-      if (path === prevPath) {
-        showIndex.resolve();
+      if (indexLevel === 0) {
+        $index = $('.' + getIndexClassForLevel(0));
+        if ($index.length === 0) {
+          $index = synthesizeIndex(indexLevel, $links).appendTo(getIndexContainer(this));
+        }
       } else {
-        $index.fadeOut('fast', function() {
-          $index.empty().data('pseudositer', {
-            path: path
-          }).append($links);
-          return showIndex.resolve();
+        $link = $('a[href="#' + path + '"]');
+        $index = $link.siblings('.' + indexClass);
+        if ($index.length === 0) {
+          $index = synthesizeIndex(indexLevel, $links);
+          $link.after($index);
+        }
+      }
+      if ($index.is(':visible')) {
+        dfd.resolve();
+      } else {
+        $index.fadeIn('fast', function() {
+          return dfd.resolve();
         });
       }
       return;
@@ -585,12 +591,12 @@
         return loadedIntoCache.promise();
       };
       showIndices = function(path) {
-        var indicesDestroyed, promises, trails;
+        var indicesHidden, promises, trails;
         if (_this.logging) log("showIndices( " + path + " )");
-        indicesDestroyed = new $.Deferred();
-        trigger('destroyIndex', indicesDestroyed, getPathDepth(path));
+        indicesHidden = new $.Deferred();
+        trigger('hideIndex', indicesHidden, path);
         trails = getIndexTrail(path);
-        promises = [indicesDestroyed.promise()];
+        promises = [indicesHidden.promise()];
         $.each(trails, function(idx, trail) {
           var $links, indexCreated, lastPromise, linkSelected;
           $links = _this.cache[trail];
@@ -601,7 +607,7 @@
             return trigger('selectLink', linkSelected, trail, updateLinkClasses(trail));
           });
           linkSelected.done(function() {
-            return trigger('createIndex', indexCreated, trail, $links);
+            return trigger('showIndex', indexCreated, trail, $links);
           });
           return promises.push(indexCreated.promise());
         });
@@ -617,8 +623,8 @@
       failedLoading: [],
       doneLoading: [],
       alwaysLoading: [hideLoadingNotice],
-      destroyIndex: [destroyIndex],
-      createIndex: [createIndex],
+      hideIndex: [hideIndex],
+      showIndex: [showIndex],
       selectLink: [selectLink],
       hideContent: [hideContent],
       showContent: [showContent],

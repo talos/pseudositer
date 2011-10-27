@@ -51,8 +51,8 @@ and the paths to your javascript libraries as appropriate:
     'doneLoading'   # ( evt, path ) Triggered when loading has succeeded
     'alwaysLoading' # ( evt, path ) Triggered when loading finishes, whether it failed or succeeded
 
-    'destroyIndex' # ( evt, dfd, aboveIndexLevel ) Triggered when indices above a certain level should be destroyed
-    'createIndex'  # ( evt, dfd, path, $links ) Triggered when an index to a certain path should be created with the specified links
+    'hideIndex' # ( evt, dfd, path ) Triggered when indices outside of the supplied path should be hidden
+    'showIndex' # ( evt, dfd, path, $links ) Triggered when an index to a certain path should be shown with the specified links
 
     'selectLink'   # ( evt, dfd, path, $link ) Triggered when a link is selected.
 
@@ -263,7 +263,8 @@ and the paths to your javascript libraries as appropriate:
   updateLinkClasses = ( path ) ->
 
     $link = $( ".#{linkClass}[href=\"\##{path}\"]" )
-    $link.siblings( ".#{linkClass}" ).removeClass( selectedLinkClass )
+    # Look at the li element's siblings' link children
+    $link.parent().siblings().find( ".#{linkClass}" ).removeClass( selectedLinkClass )
     $link.addClass selectedLinkClass
 
   # Load an image.
@@ -331,6 +332,21 @@ and the paths to your javascript libraries as appropriate:
     new $.Deferred().resolve()
     #new $.Deferred().resolve $( '<a />' ).text( pathToFile ).attr 'href', pathToFile
 
+  # Synthesize an index <ul /> for cases where one didn't already exist.
+  #
+  # @param indexLevel the {int} index level to create
+  # @param $links an array of links to put in the synthesized index as list elements
+  #
+  # @return an unattached hidden {DOM} <ul /> element
+  synthesizeIndex = ( indexLevel, $links ) ->
+    levelClass = getIndexClassForLevel indexLevel
+
+    $index = $( '<ul />' ).addClass( indexClass + ' ' + levelClass ).hide()
+
+    # For each link, append it inside an <li />
+    $links.each -> $index.append $( '<li />' ).append @
+    $index
+
   ###
   #
   # Default handlers -- these are all called with the pseudositer object
@@ -380,30 +396,40 @@ and the paths to your javascript libraries as appropriate:
   #
   # @param evt the event that called this handler.
   # @param dfd A {Deferred} to resolve when the indices are destroyed
-  # @param aboveIndexLevel the {int} level above which indices should be
-  # destroyed
-  destroyIndex = ( evt, dfd, aboveIndexLevel ) ->
-    if @logging then log "destroyIndex( #{dfd}, #{aboveIndexLevel} )"
+  # @param path the path {String} to the index that is being shown.
+  # Indices exclusive of it will be hidden.
+  hideIndex = ( evt, dfd, path ) ->
+    if @logging then log "hideIndex( #{dfd}, #{path} )"
 
-    # pipe each destruction onto this
-    destroyed = new $.Deferred().resolve()
+    # pipe each hide onto this
+    hidePipeline = new $.Deferred().resolve()
 
-    # look through all of the indices, remove those with levels above
-    # aboveIndexLevel
-    $( '.' + indexClass ).each ( idx, elem ) ->
-      $index = $ elem
-      if getIndexLevel( $index ) > aboveIndexLevel
-        # Deferred for a single level
-        idxDestroy = new $.Deferred ( idxDestroy ) ->
-          $index.fadeOut 'fast', () ->
-            idxDestroy.resolve()
+    trails = getIndexTrail path
+    # Find our selected link
+    $selectedLink = $( '.' + linkClass + '[href="#' + path + '"]')
 
-        destroyed = destroyed.pipe -> idxDestroy
+    # Find its siblings descendents
+    $cousins = $selectedLink.parents( 'li' ).siblings().find( '.' + indexClass )
+    # Find any opened indexes deeper inside the selected list item
+    $grandkids = $selectedLink.siblings( '.' + indexClass ).find( '.' + indexClass )
 
-    # when all destroying is done, resolve the original deferred.
-    destroyed.done( () -> dfd.resolve() )
+    # log $selectedLink
+    # log $cousins
+    # log $grandkids
+
+    # Hide 'em
+    $.merge( $cousins, $grandkids ).each ->
+      $elem = $( @ )
+      hidden = new $.Deferred ( hidden ) ->
+        $elem.fadeOut 'fast', () ->
+          hidden.resolve()
+      hidePipeline = hidePipeline.pipe -> hidden
+
+    # when all hiding is done, resolve the original deferred.
+    hidePipeline.done( () -> dfd.resolve() )
 
     undefined
+
 
   # Create an index element to hold links if it does not already exist.
   #
@@ -411,46 +437,43 @@ and the paths to your javascript libraries as appropriate:
   # @param dfd A {Deferred} to resolve when the index is drawn
   # @param path the path to the index
   # @param $links an array of {DOM} links
-  createIndex = ( evt, dfd, path, $links ) ->
-    if @logging then log "createIndex( #{dfd}, #{path}, #{$links} )"
+  showIndex = ( evt, dfd, path, $links ) ->
+    if @logging then log "showIndex( #{dfd}, #{path}, #{$links} )"
     indexLevel = path.split( '/' ).length - 2
 
     # If an element with the index level's class is not on the page,
-    # create a div with the class, which is initially hidden
-    levelClass = getIndexClassForLevel indexLevel
-    $index = $( '.' + levelClass )
-    if $index.length is 0
-      $index = $( '<div />' )
-        .addClass( indexClass + ' ' + levelClass )
-        .hide()
-      getIndexContainer( this ).append $index
+    # or if that level of index class is synthetic,
+    # create a ul with the class, which is initially hidden.
+    # Attach within an li that has a link with the correct href.
 
-    # create data in index if there is none
-    unless $index.data 'pseudositer'
-      $index.data 'pseudositer', {}
 
-    # If the previous path is the same, make sure the element is shown
-    # and resolve immediately.
-    prevPath = $index.data( 'pseudositer' ).path
-    # lock = $index.data( 'pseudositer' ).lock # in the midst of animation
-    # if path is prevPath
-    #   dfd.resolve()
-    # else # otherwise, change the path, empty, and append new links, then resolve
-      # fade out old index, slowly, then insert new one
+    # Check for root index
+    if indexLevel is 0
+      $index = $( '.' + getIndexClassForLevel 0 )
+      if $index.length is 0
+        $index = synthesizeIndex( indexLevel, $links ).appendTo getIndexContainer this
+    else
+      # Check next to the activated link for an index, synthesize it if it's not
+      # there already
+      $link = $( 'a[href="#' + path + '"]' )
+      $index = $link.siblings( '.' + indexClass )
+      if $index.length is 0
+        $index = synthesizeIndex( indexLevel, $links )
+        $link.after $index
 
     # show index and resolve supplied deferred
-    showIndex = new $.Deferred().done ->
+    #showIndex = new $.Deferred().done ->
+    if $index.is ':visible'
+      dfd.resolve()
+    else
       $index.fadeIn( 'fast', -> dfd.resolve() )
 
-    # if the path is the same as already available, show right away
-    if path is prevPath
-      showIndex.resolve()
-    else # otherwise, modify the element then resolve
-      $index.fadeOut 'fast', ->
-        $index.empty()
-          .data( 'pseudositer', path : path )
-          .append( $links )
-        showIndex.resolve()
+    # # if the path is the same as already available, show right away
+    # if path is prevPath
+    #   showIndex.resolve()
+    # else
+    #   $index.fadeOut 'fast', ->
+    #     showIndex.resolve()
 
     undefined
 
@@ -927,14 +950,14 @@ and the paths to your javascript libraries as appropriate:
       if @logging then log "showIndices( #{path} )"
 
       # remove any index elements that are deeper than the new path
-      indicesDestroyed = new $.Deferred()
-      trigger 'destroyIndex', indicesDestroyed, getPathDepth path
+      indicesHidden = new $.Deferred()
+      trigger 'hideIndex', indicesHidden, path
 
       trails = getIndexTrail path
 
       # an array of promises whose last element will be resolved when
       # indexes are all created
-      promises = [ indicesDestroyed.promise() ]
+      promises = [ indicesHidden.promise() ]
       # create indices once the old ones are destroyed, and consecutively
       # by piping deferreds.
       # for trail in trails
@@ -950,7 +973,7 @@ and the paths to your javascript libraries as appropriate:
 
         # when the new index is created, select its link
         linkSelected.done =>
-          trigger 'createIndex', indexCreated, trail, $links
+          trigger 'showIndex', indexCreated, trail, $links
 
         promises.push( indexCreated.promise() )
 
@@ -977,8 +1000,8 @@ and the paths to your javascript libraries as appropriate:
     doneLoading   : [ ]
     alwaysLoading : [ hideLoadingNotice ]
 
-    destroyIndex: [ destroyIndex ]
-    createIndex : [ createIndex ]
+    hideIndex: [ hideIndex ]
+    showIndex: [ showIndex ]
 
     selectLink  : [ selectLink ]
 
