@@ -321,13 +321,13 @@ and the paths to your javascript libraries as appropriate:
     $links.each -> $index.append $( '<li />' ).append @
     $index
 
-  # Pull the links out of HTML response text from an Apache autoindex, return them
+  # Pull the links out of HTML response text from an autoindex, return them
   # as a vanilla array.
   #
-  # @param responseText HTML response text from an Apache autoindex.
+  # @param responseText HTML response text from an autoindex.
   #
   # @returns {Array} an array of the links
-  readApacheIndex = ( responseText ) ->
+  readAutoindex = ( responseText ) ->
     linkSelector = 'a:not([href^="?"],[href^="/"],[href^="../"])'
     links = []
     # Search through the response text for relevant links, push the href onto links
@@ -571,7 +571,7 @@ and the paths to your javascript libraries as appropriate:
       @map     = $.extend {}, $.pseudositer.defaultMap, @options.map
 
       @readIndex = switch @options.index
-        when 'apache' then readApacheIndex
+        when 'autoindex' then readAutoindex
         when 'json'   then readJSONIndex
         else throw @options.index + ' is not recognized index reader'
 
@@ -1056,10 +1056,10 @@ and the paths to your javascript libraries as appropriate:
     stripSlashes : false
 
     # The filename of index files.  If blank, will look at directories.
-    indexFileName : 'index.json'
+    indexFileName : ''
 
     # Function to read the index
-    index : 'json'
+    index : 'autoindex'
 
   # Default map between file extensions and event handlers.
   # In addition to the event object, any callbacks
