@@ -83,7 +83,6 @@ div#header strong {
 }
 
 .pseudositer-index-container {
-	position: fixed;
 	white-space: nowrap;
 	width: 100%;
 	display: block;
@@ -91,8 +90,20 @@ div#header strong {
 }
 
 .pseudositer-index {
+	position: fixed;
 	background-color: #3F2;
-	margin-bottom: 1em;
+	list-style-type: none;
+	margin: 0px;
+	padding: 0px;
+	width: 100%;
+}
+
+ul.pseudositer-index {
+}
+
+.pseudositer-index li {
+	display: inline;
+	padding: 0px;
 }
 
 .pseudositer-index .pseudositer-link {
@@ -125,7 +136,7 @@ div#header strong {
 
 .pseudositer-index-1 {
 	left: 0px;
-	top: 1.1em;
+	top: 2em;
 }
 
 .pseudositer-index-1 .pseudositer-link {

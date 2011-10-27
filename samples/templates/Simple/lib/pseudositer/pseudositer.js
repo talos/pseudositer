@@ -156,7 +156,7 @@
     updateLinkClasses = function(path) {
       var $link;
       $link = $("." + linkClass + "[href=\"\#" + path + "\"]");
-      $link.siblings("." + linkClass).removeClass(selectedLinkClass);
+      $link.parent().siblings().find("." + linkClass).removeClass(selectedLinkClass);
       return $link.addClass(selectedLinkClass);
     };
     loadImage = function(pathToImage) {
@@ -243,9 +243,6 @@
       $selectedLink = $('.' + linkClass + '[href="#' + path + '"]');
       $cousins = $selectedLink.parents('li').siblings().find('.' + indexClass);
       $grandkids = $selectedLink.siblings('.' + indexClass).find('.' + indexClass);
-      log($selectedLink);
-      log($cousins);
-      log($grandkids);
       $.merge($cousins, $grandkids).each(function() {
         var $elem, hidden;
         $elem = $(this);

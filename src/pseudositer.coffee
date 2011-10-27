@@ -263,7 +263,8 @@ and the paths to your javascript libraries as appropriate:
   updateLinkClasses = ( path ) ->
 
     $link = $( ".#{linkClass}[href=\"\##{path}\"]" )
-    $link.siblings( ".#{linkClass}" ).removeClass( selectedLinkClass )
+    # Look at the li element's siblings' link children
+    $link.parent().siblings().find( ".#{linkClass}" ).removeClass( selectedLinkClass )
     $link.addClass selectedLinkClass
 
   # Load an image.

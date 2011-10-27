@@ -65,6 +65,14 @@ div#header strong {
 }
 
 .pseudositer-index {
+	list-style-type: none;
+	margin: 0px;
+	padding: 0px;
+}
+
+.pseudositer-index li {
+	display: inline;
+	padding: 0px;
 }
 
 .pseudositer-index .pseudositer-link {

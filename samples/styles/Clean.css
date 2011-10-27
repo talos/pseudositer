@@ -75,6 +75,13 @@ div#header strong {
 	font-family: "Helvetica Neue", Arial, sans-serif;
 	font-weight: 100;
 	background-color: #633;
+	list-style-type: none;
+	margin: 0px;
+	padding: 0px;
+}
+
+.pseudositer-index li {
+	display: inline;
 }
 
 .pseudositer-index .pseudositer-link {
@@ -111,12 +118,14 @@ div#header strong {
 	width: 10em;
 	font-size: 0.9em;
 	border-radius: 1em 0em 0em 1em;
-	padding: .7em 0em .7em .7em;
+	padding: .7em 0em .7em 0em;
 }
+
 
 .pseudositer-index-1 .pseudositer-link {
 	display: block;
-	padding: .4em 0em .4em .4em;
+	padding: .4em .4em .4em 0em;
+	margin: 0em 0em 0em .7em;
 }
 
 .pseudositer-index-1 .pseudositer-link-selected {
