@@ -1,0 +1,176 @@
+body {
+	font-family: Georgia, Palatino, serif;
+	font-size: 1.2em;
+	color: #222;
+	background: #CCD;
+}
+
+a {
+	text-decoration: none;
+	color: #633;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+code {
+	background: #CDC;
+	color: #331;
+	display: inline-block;
+	margin: .1em;
+	padding: .2em;
+	border-radius: .2em;
+	overflow: scroll;
+	max-width: 100%;
+}
+
+h1 {
+}
+
+h2 {
+}
+
+h3 {
+}
+
+ul {
+	list-style-type: square;
+}
+
+hr {
+	border: 0px;
+	height: 1px;
+	color: black;
+	background-color: black;
+	border: none;
+	width: 50%;
+}
+
+div#pseudositer {
+	position: relative;
+	width: 600px;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+div#header {
+	bottom: 0px;
+	left: 0px;
+	position: fixed;
+}
+
+div#header a {
+	color: #999;
+	font-size: 4em;
+	font-style: italic;
+	font-family: Georgia, Palatino, serif;
+}
+
+div#header strong {
+	font-weight: bold;
+}
+
+.pseudositer-index {
+	font-family: "Helvetica Neue", Arial, sans-serif;
+	font-weight: 100;
+	background-color: #633;
+	list-style-type: none;
+	margin: 0px;
+	padding: 0px;
+}
+
+.pseudositer-index li {
+	display: inline;
+}
+
+.pseudositer-index .pseudositer-link {
+	color: white;
+}
+
+.pseudositer-index .pseudositer-link-selected {
+	font-weight: normal;
+	color: black;
+}
+
+.pseudositer-index-0 {
+	position: relative;
+	bottom: 0px;
+	text-align: right;
+	white-space: nowrap;
+	border-radius: 1em 1em 0em 0em;
+	padding: 1em 0em 0em 0em;
+}
+
+.pseudositer-index-0 .pseudositer-link {
+	padding: .5em;
+}
+
+.pseudositer-index-0 .pseudositer-link-selected {
+	background: white;
+	border-radius: .4em .4em 0em 0em;
+	box-shadow: 5px 5px black;
+}
+
+.pseudositer-index-1 {
+	position: absolute;
+	left: -10em;
+	width: 10em;
+	font-size: 0.9em;
+	border-radius: 1em 0em 0em 1em;
+	padding: .7em 0em .7em 0em;
+}
+
+
+.pseudositer-index-1 .pseudositer-link {
+	display: block;
+	padding: .4em .4em .4em 0em;
+	margin: 0em 0em 0em .7em;
+}
+
+.pseudositer-index-1 .pseudositer-link-selected {
+	background: white;
+	border-radius: .4em 0em 0em .4em;
+	box-shadow: 5px 5px black;
+}
+
+.pseudositer-content {
+	min-height: 100%;
+	top: 0px;
+	padding: .5em 1.4em .5em 1.4em;
+	z-index: 1;
+	border-radius: 0em 0em 1em 1em;
+	border: solid black 0px 1px 1px 1px;
+	position: relative;
+	background-color: white;
+	box-shadow: 5px 5px black;
+}
+
+.pseudositer-loading {
+	position: fixed;
+	left: 40%;
+	width: 20%;
+	top: 40%;
+	color: #222;
+	background-color: white;
+	opacity: 50%;
+	vertical-align: middle;
+	text-align: center;
+	border-radius: .5em;
+	border: 1px solid black;
+	padding: 1em;
+}
+
+.pseudositer-error {
+	position: fixed;
+	left: 40%;
+	width: 20%;
+	top: 40%;
+	background-color: #C33;
+	color: #EFE;
+	vertical-align: middle;
+	text-align: center;
+	border-radius: .5em;
+	border: 1px solid black;
+	padding: 1em;
+}
