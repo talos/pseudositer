@@ -726,6 +726,33 @@ and the paths to your javascript libraries as appropriate:
       else
         path
 
+    # Find the path to content that should be displayed when updating for an index path.
+    # This is content that lives in cache with the same name as path, but has an
+    # extension.
+    #
+    # @param path the {String} path to an index to check for default content
+    #
+    # @return {String} the path to default content if it exists, {Null} if it doesn't
+    findDefaultContentPath = ( path ) =>
+      'test'
+      if path is '/'
+        defaultContentPath = @rootContentPath
+      else
+        # Look inside container folder
+        splitPath = path.split( '/' )
+        container = splitPath[ 0..splitPath.length - 1].join( '/' ) + '/'
+
+        possibleFileNames = @cache[ container ]
+        folderName = splitPath[ splitPath.length - 1]
+        folderName.substr 0, folderName.length - 1 # strip trailing slash
+
+        for fileName in possibleFileNames
+          if fileName.startsWith folderName.substr 0, folderName.length - 1
+            defaultContentPath = container + fileName
+
+      # Return null if couldn't find anything matching in the container
+      defaultContentPath
+
     # Update browser to display the view associated with the current fragment.
     # Will load, then change fragment (which will call {#update()} again) if
     # the content is not yet cached.
@@ -740,17 +767,18 @@ and the paths to your javascript libraries as appropriate:
       # nonexistent path is "/", break out of function to prevent redundancy
       if path is ''
         document.location.hash = '/'
-        return
+        return this
 
       # make sure path in fragment is absolute
       if path.charAt( 0 ) isnt '/'
         document.location.hash = "/#{path}"
-        return
+        return this
 
-      # redirect to file if recursion is true and not pointing to file already
-      if @options.recursion is true and isPathToFile( path ) isnt true
+      # redirect to file if recursion is true and not pointing to file or
+      # a folder with default content already
+      if @options.recursion is true and ( isPathToFile( path ) isnt true and findDefaultContentPath( path ) is null )
         redirectToFile( path )
-        return
+        return this
 
       trigger 'startUpdate', path, getAjaxPath path
 
@@ -789,10 +817,15 @@ and the paths to your javascript libraries as appropriate:
             # indices are shown
             $.when( indicesShown, contentHidden )
               .done( =>
-                # only show content if the path points to content
-                if isPathToFile path
-                  linkSelected = new $.Deferred()
+                # show content if the path points to content, or if
+                # there is default content
+                pathToFile = if isPathToFile path then path else findDefaultContentPath path
 
+                # if no path directly to file or default content, resolve immediately
+                if pathToFile is null
+                  updateDfd.resolve()
+                else
+                  linkSelected = new $.Deferred()
 
                   trigger 'selectLink', linkSelected, path, updateLinkClasses( path )
 
@@ -803,12 +836,8 @@ and the paths to your javascript libraries as appropriate:
 
                   # when link is selected, show the content
                   linkSelected.done ->
-                    trigger 'showContent', contentShown, $content
-                else # otherwise resolve update process immediately
-                  updateDfd.resolve() )
-              .fail( ( failObj ) -> updateDfd.reject failObj )
-          )
-
+                    trigger 'showContent', contentShown, $content )
+              .fail( ( failObj ) -> updateDfd.reject failObj ))
       this
 
     # Obtain a {Promise} object that, once done, means that
@@ -984,18 +1013,18 @@ and the paths to your javascript libraries as appropriate:
       promises = [ indicesHidden.promise() ]
       # create indices once the old ones are destroyed, and consecutively
       # by piping deferreds.
-      # for trail in trails
+      # for trail in trails # <--- doesn't work because of scope problems
       $.each trails, (idx, trail) =>
         $links = @cache[ trail ]
         lastPromise = promises[ promises.length - 1 ]
         indexCreated = new $.Deferred()
         linkSelected = new $.Deferred()
 
-        # when last link is selected, create the new index
+        # when the new index is created, select its link
         lastPromise.done =>
           trigger 'selectLink', linkSelected, trail, updateLinkClasses( trail )
 
-        # when the new index is created, select its link
+        # when last link is selected, create the new index
         linkSelected.done =>
           trigger 'showIndex', indexCreated, trail, $links
 
@@ -1008,8 +1037,6 @@ and the paths to your javascript libraries as appropriate:
 
   # default options
   $.pseudositer.defaultOptions =
-
-    linkSelector   : 'a:not([href^="?"],[href^="/"],[href^="../"])' # Find relative links from an index page that go deeper
 
     # Default map between event handlers and static functions.
     # If any of these options are overriden, the static function

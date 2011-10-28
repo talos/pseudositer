@@ -347,7 +347,7 @@
       #
     */
     $.pseudositer = function(el, hiddenPath, options) {
-      var clipExtension, getAjaxPath, load, loadContent, loadIndex, redirectToFile, showIndices, trigger, update;
+      var clipExtension, findDefaultContentPath, getAjaxPath, load, loadContent, loadIndex, redirectToFile, showIndices, trigger, update;
       var _this = this;
       this.$el = $(el);
       this.$el.data("pseudositer", this);
@@ -462,21 +462,41 @@
           return path;
         }
       };
+      findDefaultContentPath = function(path) {
+        'test';
+        var container, defaultContentPath, fileName, folderName, possibleFileNames, splitPath, _i, _len;
+        if (path === '/') {
+          defaultContentPath = _this.rootContentPath;
+        } else {
+          splitPath = path.split('/');
+          container = splitPath.slice(0, (splitPath.length - 1) + 1 || 9e9).join('/') + '/';
+          possibleFileNames = _this.cache[container];
+          folderName = splitPath[splitPath.length - 1];
+          folderName.substr(0, folderName.length - 1);
+          for (_i = 0, _len = possibleFileNames.length; _i < _len; _i++) {
+            fileName = possibleFileNames[_i];
+            if (fileName.startsWith(folderName.substr(0, folderName.length - 1))) {
+              defaultContentPath = container + fileName;
+            }
+          }
+        }
+        return defaultContentPath;
+      };
       update = function() {
         var path, updateDfd;
         if (_this.logging) log("update( )");
         path = getCurrentFragment();
         if (path === '') {
           document.location.hash = '/';
-          return;
+          return _this;
         }
         if (path.charAt(0) !== '/') {
           document.location.hash = "/" + path;
-          return;
+          return _this;
         }
-        if (_this.options.recursion === true && isPathToFile(path) !== true) {
+        if (_this.options.recursion === true && (isPathToFile(path) !== true && findDefaultContentPath(path) === null)) {
           redirectToFile(path);
-          return;
+          return _this;
         }
         trigger('startUpdate', path, getAjaxPath(path));
         updateDfd = new $.Deferred().done(function() {
@@ -503,8 +523,11 @@
             contentHidden = new $.Deferred();
             trigger('hideContent', contentHidden);
             return $.when(indicesShown, contentHidden).done(function() {
-              var $content, contentShown, linkSelected;
-              if (isPathToFile(path)) {
+              var $content, contentShown, linkSelected, pathToFile;
+              pathToFile = isPathToFile(path) ? path : findDefaultContentPath(path);
+              if (pathToFile === null) {
+                return updateDfd.resolve();
+              } else {
                 linkSelected = new $.Deferred();
                 trigger('selectLink', linkSelected, path, updateLinkClasses(path));
                 $content = _this.cache[path];
@@ -516,8 +539,6 @@
                 return linkSelected.done(function() {
                   return trigger('showContent', contentShown, $content);
                 });
-              } else {
-                return updateDfd.resolve();
               }
             }).fail(function(failObj) {
               return updateDfd.reject(failObj);
@@ -642,7 +663,6 @@
       return this.init();
     };
     $.pseudositer.defaultOptions = {
-      linkSelector: 'a:not([href^="?"],[href^="/"],[href^="../"])',
       startUpdate: [hideError],
       doneUpdate: [],
       startLoading: [showLoadingNotice],
