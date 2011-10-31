@@ -347,7 +347,7 @@
       #
     */
     $.pseudositer = function(el, hiddenPath, options) {
-      var clipExtension, findDefaultContentPath, getAjaxPath, load, loadContent, loadIndex, redirectToFile, showIndices, trigger, update;
+      var clipExtension, getAjaxPath, load, loadContent, loadIndex, redirectToFile, showIndices, trigger, update;
       var _this = this;
       this.$el = $(el);
       this.$el.data("pseudositer", this);
@@ -462,28 +462,8 @@
           return path;
         }
       };
-      findDefaultContentPath = function(path) {
-        'test';
-        var container, defaultContentPath, fileName, folderName, possibleFileNames, splitPath, _i, _len;
-        if (path === '/') {
-          defaultContentPath = _this.rootContentPath;
-        } else {
-          splitPath = path.split('/');
-          container = splitPath.slice(0, (splitPath.length - 1) + 1 || 9e9).join('/') + '/';
-          possibleFileNames = _this.cache[container];
-          folderName = splitPath[splitPath.length - 1];
-          folderName.substr(0, folderName.length - 1);
-          for (_i = 0, _len = possibleFileNames.length; _i < _len; _i++) {
-            fileName = possibleFileNames[_i];
-            if (fileName.startsWith(folderName.substr(0, folderName.length - 1))) {
-              defaultContentPath = container + fileName;
-            }
-          }
-        }
-        return defaultContentPath;
-      };
       update = function() {
-        var path, updateDfd;
+        var path, updateDfd, _ref;
         if (_this.logging) log("update( )");
         path = getCurrentFragment();
         if (path === '') {
@@ -494,9 +474,11 @@
           document.location.hash = "/" + path;
           return _this;
         }
-        if (_this.options.recursion === true && (isPathToFile(path) !== true && findDefaultContentPath(path) === null)) {
-          redirectToFile(path);
-          return _this;
+        if (_this.options.recursion === true && isPathToFile(path) !== true) {
+          if (((_ref = _this.cache[path]) != null ? _ref["default"] : void 0) == null) {
+            redirectToFile(path);
+            return _this;
+          }
         }
         trigger('startUpdate', path, getAjaxPath(path));
         updateDfd = new $.Deferred().done(function() {
@@ -505,9 +487,9 @@
           return trigger('showError', failObj);
         });
         _this.updating.always(function() {
-          var loaded;
+          var loaded, _ref2;
           _this.updating = updateDfd.promise();
-          if (_this.cache[path] != null) {
+          if (((_ref2 = _this.cache[path]) != null ? _ref2.links : void 0) != null) {
             loaded = new $.Deferred().resolve();
           } else {
             loaded = load(path);
@@ -524,13 +506,13 @@
             trigger('hideContent', contentHidden);
             return $.when(indicesShown, contentHidden).done(function() {
               var $content, contentShown, linkSelected, pathToFile;
-              pathToFile = isPathToFile(path) ? path : findDefaultContentPath(path);
-              if (pathToFile === null) {
+              pathToFile = isPathToFile(path) ? path : _this.cache[path]["default"];
+              if (pathToFile == null) {
                 return updateDfd.resolve();
               } else {
                 linkSelected = new $.Deferred();
                 trigger('selectLink', linkSelected, path, updateLinkClasses(path));
-                $content = _this.cache[path];
+                $content = _this.cache[pathToFile];
                 contentShown = new $.Deferred().done(function() {
                   return updateDfd.resolve();
                 }).fail(function(failObj) {
@@ -548,17 +530,21 @@
         return _this;
       };
       load = function(path) {
-        var progress, promises, trail, trails, _i, _len, _ref;
+        var progress, promises, trails;
         if (_this.logging) log("load( " + path + " )");
         trigger('startLoading', path);
         promises = [];
         if (isPathToFile(path)) promises.push(loadContent(path));
         trails = getIndexTrail(path);
-        _ref = trails.slice(0, (trails.length - 1) + 1 || 9e9);
-        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-          trail = _ref[_i];
-          promises.push(loadIndex(trail));
-        }
+        $.each(trails.slice(0, (trails.length - 1) + 1 || 9e9), function(idx, trail) {
+          var indexLoaded;
+          indexLoaded = loadIndex(trail).pipe(function() {
+            if (_this.cache[trail]["default"] != null) {
+              return loadContent(_this.cache[trail]["default"]);
+            }
+          });
+          return promises.push(indexLoaded);
+        });
         return progress = $.when.apply(_this, promises).done(function() {
           return trigger('doneLoading', path);
         }).fail(function(errObj) {
@@ -574,11 +560,15 @@
         } else {
           loadIndex(path).done(function() {
             var $links;
-            $links = _this.cache[path];
-            if ($links.length === 0) {
-              return trigger('showError', "" + path + " has no content");
+            if (_this.cache[path]["default"] != null) {
+              return trigger('update');
             } else {
-              return redirectToFile($links.first().attr('href').substr(1));
+              $links = _this.cache[path].links;
+              if ($links.length === 0) {
+                return trigger('showError', "" + path + " has no content");
+              } else {
+                return redirectToFile($links.first().attr('href').substr(1));
+              }
             }
           }).fail(function(errObj) {
             return trigger('showError', errObj);
@@ -587,10 +577,10 @@
         return _this;
       };
       loadIndex = function(indexPath) {
-        var dfd, indexPage;
+        var dfd, indexPage, _ref;
         if (_this.logging) log("loadIndex( " + indexPath + " )");
         dfd = new $.Deferred();
-        if (_this.cache[indexPath] != null) {
+        if (((_ref = _this.cache[indexPath]) != null ? _ref.links : void 0) != null) {
           dfd.resolve();
         } else {
           indexPage = indexPath + _this.options.indexFileName;
@@ -599,7 +589,7 @@
             dataType: 'text',
             dataFilter: _this.readIndex
           }).done(function(links) {
-            var $dummy;
+            var $dummy, _cache;
             $dummy = $('<div />');
             $.each(links, function(idx, link) {
               var $link, href, text;
@@ -614,7 +604,25 @@
               text = decodeURI(text);
               return $link = $('<a />').attr('href', href).addClass(linkClass).text(text).appendTo($dummy);
             });
-            _this.cache[indexPath] = $dummy.children();
+            _this.cache[indexPath] = _this.cache[indexPath] != null ? _this.cache[indexPath] : {};
+            _cache = _this.cache;
+            $dummy.children('a[href$="/"]').each(function() {
+              var $folder, folderName;
+              $folder = $(this);
+              folderName = $folder.attr('href');
+              folderName = folderName.substr(0, folderName.length - 1);
+              return $dummy.children('a[href^="' + folderName + '"]').each(function() {
+                var $elem;
+                $elem = $(this);
+                if ($elem.attr('href') !== folderName + '/') {
+                  $elem.remove();
+                  return _cache[$folder.attr('href').substr(1)] = {
+                    "default": $elem.attr('href').substr(1)
+                  };
+                }
+              });
+            });
+            _this.cache[indexPath].links = $dummy.children();
             return dfd.resolve();
           }).fail(function(failObj) {
             return dfd.reject("Could not load index page for " + indexPath + " at " + indexPage);
@@ -646,7 +654,7 @@
         promises = [indicesHidden.promise()];
         $.each(trails, function(idx, trail) {
           var $links, indexCreated, lastPromise, linkSelected;
-          $links = _this.cache[trail];
+          $links = _this.cache[trail].links;
           lastPromise = promises[promises.length - 1];
           indexCreated = new $.Deferred();
           linkSelected = new $.Deferred();
@@ -676,7 +684,7 @@
       showContent: [showContent],
       showError: [showError],
       destroy: [hideLoadingNotice, hideError],
-      logging: false,
+      logging: true,
       timeout: 10000,
       recursion: false,
       showExtension: false,

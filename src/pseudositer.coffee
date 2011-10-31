@@ -563,7 +563,8 @@ and the paths to your javascript libraries as appropriate:
     @$el.data "pseudositer", @
 
     # Cache of index pages and contents by path.
-    # Each index page element is an array of <a> elements.
+    # Each index page element is an object, whose key 'default' maps to the
+    # path to default content, and whose key 'links' maps to an array of <a> elements.
     # Each content element is DOM that can be appended to a content element.
     @cache = {}
 
@@ -726,6 +727,17 @@ and the paths to your javascript libraries as appropriate:
       else
         path
 
+
+    # Determine whether there is default content for this path to an index.
+    # hasDefaultContent = ( path ) =>
+
+    #     # redirect to default content if it exists
+    #     splitPath = path.split '/'
+    #     container = splitPath[ 0...splitPath.length - 2 ].join( '/' ) + '/'
+    #     if @cache[ container ].default?
+    #       document.location.hash = @cache[ container ].default
+
+
     # Find the path to content that should be displayed when updating for an index path.
     # This is content that lives in cache with the same name as path, but has an
     # extension.
@@ -733,25 +745,31 @@ and the paths to your javascript libraries as appropriate:
     # @param path the {String} path to an index to check for default content
     #
     # @return {String} the path to default content if it exists, {Null} if it doesn't
-    findDefaultContentPath = ( path ) =>
-      'test'
-      if path is '/'
-        defaultContentPath = @rootContentPath
-      else
-        # Look inside container folder
-        splitPath = path.split( '/' )
-        container = splitPath[ 0..splitPath.length - 1].join( '/' ) + '/'
+  #
+#
+#
+    # findDefaultContentPath = ( path ) =>
+    #   if @logging then log "findDefaultContentPath ( #{path} )"
+    #   if path is '/'
+    #     return if @rootContentPath? then @rootContentPath else null
+    #   else
+    #     # Look inside container folder
+    #     splitPath = path.split( '/' )
+    #     container = splitPath[ 0...splitPath.length - 2 ].join( '/' ) + '/'
+    #     log 'container: ' + container
 
-        possibleFileNames = @cache[ container ]
-        folderName = splitPath[ splitPath.length - 1]
-        folderName.substr 0, folderName.length - 1 # strip trailing slash
+    #     $links = @cache[ container ].links
+    #     folderName = splitPath[ splitPath.length - 2]
 
-        for fileName in possibleFileNames
-          if fileName.startsWith folderName.substr 0, folderName.length - 1
-            defaultContentPath = container + fileName
+    #     for linkElem in $links
+    #       href = $( linkElem ).attr( 'href' ).substr 1
+    #       fileName = href.substr href.lastIndexOf( '/' ) + 1
+    #       if fileName.substr( 0, folderName.length ) is folderName
+    #         log "found default path: #{container + fileName}"
+    #         return container + fileName
 
-      # Return null if couldn't find anything matching in the container
-      defaultContentPath
+    #   # Return null if couldn't find anything matching in the container
+    #   null
 
     # Update browser to display the view associated with the current fragment.
     # Will load, then change fragment (which will call {#update()} again) if
@@ -776,9 +794,11 @@ and the paths to your javascript libraries as appropriate:
 
       # redirect to file if recursion is true and not pointing to file or
       # a folder with default content already
-      if @options.recursion is true and ( isPathToFile( path ) isnt true and findDefaultContentPath( path ) is null )
-        redirectToFile( path )
-        return this
+      if @options.recursion is true and isPathToFile( path ) isnt true
+        # unless there's a default, redirect to file
+        unless @cache[ path ]?.default?
+          redirectToFile( path )
+          return this
 
       trigger 'startUpdate', path, getAjaxPath path
 
@@ -791,7 +811,7 @@ and the paths to your javascript libraries as appropriate:
         @updating = updateDfd.promise()
 
         # load the path if it's not already cached
-        if @cache[ path ]?
+        if @cache[ path ]?.links?
           loaded = new $.Deferred().resolve()
         else
           loaded = load( path )
@@ -819,17 +839,21 @@ and the paths to your javascript libraries as appropriate:
               .done( =>
                 # show content if the path points to content, or if
                 # there is default content
-                pathToFile = if isPathToFile path then path else findDefaultContentPath path
+                pathToFile = if isPathToFile path then path else @cache[ path ].default
 
                 # if no path directly to file or default content, resolve immediately
-                if pathToFile is null
+                # without content
+                unless pathToFile?
                   updateDfd.resolve()
                 else
                   linkSelected = new $.Deferred()
 
+                  # select the regular path link, not the pathToFile which could be a
+                  # path to default content
                   trigger 'selectLink', linkSelected, path, updateLinkClasses( path )
 
-                  $content = @cache[ path ]
+                  # show the content from pathToFile, though
+                  $content = @cache[ pathToFile ]
                   contentShown = new $.Deferred()
                     .done( ()          -> updateDfd.resolve() )
                     .fail( ( failObj ) -> updateDfd.reject failObj )
@@ -863,9 +887,15 @@ and the paths to your javascript libraries as appropriate:
       trails = getIndexTrail path
 
       # request any trails leading to path
-      for trail in trails[ 0..trails.length - 1 ]
+      $.each trails[ 0..trails.length - 1], ( idx, trail ) =>
         # start loading the index now
-        promises.push loadIndex trail
+        indexLoaded = loadIndex( trail ).pipe =>
+          # if there's default content, consider it part of the load
+
+          if @cache[ trail ].default?
+            loadContent @cache[ trail ].default
+
+        promises.push indexLoaded
 
       # if only jQuery let us pass an array of deferreds to $.when
       progress = $.when.apply(@, promises)
@@ -891,16 +921,20 @@ and the paths to your javascript libraries as appropriate:
       # redirect to content if we have a file
       if isPathToFile path
         document.location.hash = path
-      else
-        # when the index is loaded, call unfold again using the first
-        # link and reusing the deferred object
+      else # otherwise, look inside index
         loadIndex( path )
           .done( () =>
-            $links = @cache[ path ]
-            if $links.length is 0 # empty index page
-              trigger 'showError', "#{path} has no content"
-            else # the link attr is already hashified
-              redirectToFile $links.first().attr( 'href' ).substr( 1 ) )
+            # if there's a default for this path, force update
+            if @cache[ path ].default?
+              trigger 'update'
+            # otherwise, when the index is loaded, call unfold again using the first
+            # link and reusing the deferred object
+            else
+              $links = @cache[ path ].links
+              if $links.length is 0 # empty index page
+                trigger 'showError', "#{path} has no content"
+              else # the link attr is already hashified
+                redirectToFile $links.first().attr( 'href' ).substr( 1 ) )
           .fail( (errObj) -> trigger 'showError', errObj )
 
       this
@@ -920,7 +954,7 @@ and the paths to your javascript libraries as appropriate:
 
       # if the index is cached, use the links stored there and resolve
       # immediately
-      if @cache[ indexPath ]?
+      if @cache[ indexPath ]?.links?
         dfd.resolve()
 
       # otherwise, load the index and resolve once that's done
@@ -956,7 +990,24 @@ and the paths to your javascript libraries as appropriate:
               .text( text )
               .appendTo( $dummy )
 
-          @cache[ indexPath ] = $dummy.children()
+          @cache[ indexPath ] = if @cache[ indexPath ]? then @cache[ indexPath] else {}
+          _cache = @cache
+
+          # Eliminate links to files that share names with indices -- these are default content.
+          $dummy.children( 'a[href$="/"]' ).each ->
+            $folder = $( this )
+            folderName = $folder.attr( 'href' )
+            folderName = folderName.substr 0, folderName.length - 1
+            # select all elements that start with the folder name
+            $dummy.children( 'a[href^="' + folderName + '"]' ).each ->
+              # eliminate them if they're not the original link
+              $elem = $( this )
+              unless $elem.attr( 'href' ) is folderName + '/'
+                $elem.remove()
+                # assign removed link to default
+                _cache[ $folder.attr('href').substr 1 ] = default : $elem.attr( 'href' ).substr 1
+
+          @cache[ indexPath ].links = $dummy.children()
 
           # only resolve once the cache is actually updated
           dfd.resolve()
@@ -1015,7 +1066,7 @@ and the paths to your javascript libraries as appropriate:
       # by piping deferreds.
       # for trail in trails # <--- doesn't work because of scope problems
       $.each trails, (idx, trail) =>
-        $links = @cache[ trail ]
+        $links = @cache[ trail ].links
         lastPromise = promises[ promises.length - 1 ]
         indexCreated = new $.Deferred()
         linkSelected = new $.Deferred()
@@ -1063,7 +1114,7 @@ and the paths to your javascript libraries as appropriate:
     destroy     : [ hideLoadingNotice, hideError ]
 
     # Whether to log function calls
-    logging : false
+    logging : true
 
     # How many milliseconds to wait between the start of loading and
     # when loading is resolved.
