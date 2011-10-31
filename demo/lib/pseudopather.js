@@ -2,7 +2,7 @@
 
 $( document ).ready( function() {
 	var oldPlug, defaultPseudopath;
-	defaultPseudopath = '../fixtures/';
+	defaultPseudopath = '../fixtures.html';
 
 	// Create form
 	$( '#pseudopather' ).prepend(

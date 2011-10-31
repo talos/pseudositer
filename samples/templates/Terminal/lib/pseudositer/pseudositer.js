@@ -235,21 +235,28 @@
       return;
     };
     hideIndex = function(evt, dfd, path) {
-      var $cousins, $grandkids, $selectedLink, hidePipeline, trail, trails, _i, _len;
+      var $cousins, $grandkids, $selectedLink, $toHide, hidePipeline, trail, trails, _i, _len;
       if (this.logging) log("hideIndex( " + dfd + ", " + path + " )");
       hidePipeline = new $.Deferred().resolve();
-      $selectedLink = $('.' + linkClass + '[href="#' + path + '"]');
-      if ($selectedLink.length === 0) {
-        trails = getIndexTrail(path).reverse();
-        for (_i = 0, _len = trails.length; _i < _len; _i++) {
-          trail = trails[_i];
-          $selectedLink = $('.' + linkClass + '[href="#' + trail + '"]');
-          if ($selectedLink.length > 0) break;
+      if (path === '/') {
+        $toHide = $('.' + indexClass).filter(function() {
+          return !$(this).hasClass('.' + getIndexClassForLevel(0));
+        });
+      } else {
+        $selectedLink = $('.' + linkClass + '[href="#' + path + '"]');
+        if ($selectedLink.length === 0) {
+          trails = getIndexTrail(path).reverse();
+          for (_i = 0, _len = trails.length; _i < _len; _i++) {
+            trail = trails[_i];
+            $selectedLink = $('.' + linkClass + '[href="#' + trail + '"]');
+            if ($selectedLink.length > 0) break;
+          }
         }
+        $cousins = $selectedLink.parents('li').siblings().find('.' + indexClass);
+        $grandkids = $selectedLink.siblings('.' + indexClass).find('.' + indexClass);
+        $toHide = $.merge($cousins, $grandkids);
       }
-      $cousins = $selectedLink.parents('li').siblings().find('.' + indexClass);
-      $grandkids = $selectedLink.siblings('.' + indexClass).find('.' + indexClass);
-      $.merge($cousins, $grandkids).each(function() {
+      $toHide.each(function() {
         var $elem, hidden;
         $elem = $(this);
         hidden = new $.Deferred(function(hidden) {
@@ -353,7 +360,7 @@
       this.$el.data("pseudositer", this);
       this.cache = {};
       this.init = function() {
-        var event, handler, split, _i, _j, _len, _len2, _ref;
+        var defaultRootContent, event, handler, split, _i, _j, _len, _len2, _ref;
         _this.options = $.extend({}, $.pseudositer.defaultOptions, options);
         _this.map = $.extend({}, $.pseudositer.defaultMap, _this.options.map);
         _this.readIndex = (function() {
@@ -369,6 +376,10 @@
         _this.visiblePath = getCurrentPath();
         _this.logging = _this.options.logging;
         _this.updating = new $.Deferred().resolve().promise();
+        if (isPathToFile(hiddenPath)) {
+          defaultRootContent = hiddenPath;
+          hiddenPath = hiddenPath.substr(0, hiddenPath.lastIndexOf('.')) + '/';
+        }
         if (!hiddenPath.charAt(hiddenPath.length - 1)) {
           hiddenPath = "" + hiddenPath + "/";
         }
@@ -402,6 +413,11 @@
               return false;
             });
           }
+        }
+        if (defaultRootContent != null) {
+          _this.cache['/'] = {
+            "default": '/../' + defaultRootContent
+          };
         }
         update();
         return _this;
@@ -684,7 +700,7 @@
       showContent: [showContent],
       showError: [showError],
       destroy: [hideLoadingNotice, hideError],
-      logging: true,
+      logging: false,
       timeout: 10000,
       recursion: false,
       showExtension: false,

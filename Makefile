@@ -29,9 +29,10 @@ all:
 		cp -R $(SKELETON_DIR)/* $$STYLE_TEMPLATE_DIR ; \
 		mkdir $$STYLE_TEMPLATE_DIR/css ; \
 		cp $$STYLE_PATH $$STYLE_TEMPLATE_DIR/css/pseudositer-stylesheet.css ; \
-		cd $(TEMPLATES_DIR) ; \
-		zip -r $$STYLE_NAME.zip $$STYLE_NAME/ ; \
 	done
+
+# cd $(TEMPLATES_DIR) ; \
+# zip -r $$STYLE_NAME.zip $$STYLE_NAME/ ; \
 
 clean:
 	@echo Cleaning $(LIB_DIR)...

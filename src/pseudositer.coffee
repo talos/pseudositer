@@ -399,23 +399,30 @@ and the paths to your javascript libraries as appropriate:
     # pipe each hide onto this
     hidePipeline = new $.Deferred().resolve()
 
-    # Find our selected link
-    # It's possible for hideIndex to be called before selectedLink exists, so look
-    # for the most specific existing index
-    $selectedLink = $( '.' + linkClass + '[href="#' + path + '"]')
-    if $selectedLink.length == 0
-      trails = getIndexTrail( path ).reverse() # check last first
-      for trail in trails
-        $selectedLink = $( '.' + linkClass + '[href="#' + trail + '"]')
-        break if $selectedLink.length > 0
+    if path is '/'
+      # If root, remove any non-0 level indices
+      $toHide = $( '.' + indexClass ).filter ->
+        not $( this ).hasClass '.' + getIndexClassForLevel 0
+    else
+      # Find our selected link
+      # It's possible for hideIndex to be called before selectedLink exists, so look
+      # for the most specific existing index
+      $selectedLink = $( '.' + linkClass + '[href="#' + path + '"]')
+      if $selectedLink.length == 0
+        trails = getIndexTrail( path ).reverse() # check last first
+        for trail in trails
+          $selectedLink = $( '.' + linkClass + '[href="#' + trail + '"]')
+          break if $selectedLink.length > 0
 
-    # Find its siblings descendents
-    $cousins = $selectedLink.parents( 'li' ).siblings().find( '.' + indexClass )
-    # Find any opened indexes deeper inside the selected list item
-    $grandkids = $selectedLink.siblings( '.' + indexClass ).find( '.' + indexClass )
+      # Find its siblings descendents
+      $cousins = $selectedLink.parents( 'li' ).siblings().find( '.' + indexClass )
+      # Find any opened indexes deeper inside the selected list item
+      $grandkids = $selectedLink.siblings( '.' + indexClass ).find( '.' + indexClass )
+
+      $toHide = $.merge( $cousins, $grandkids )
 
     # Hide 'em
-    $.merge( $cousins, $grandkids ).each ->
+    $toHide.each ->
       $elem = $( @ )
       hidden = new $.Deferred ( hidden ) ->
         $elem.fadeOut 'fast', () ->
@@ -584,6 +591,12 @@ and the paths to your javascript libraries as appropriate:
       # Promise used to queue updating
       @updating = new $.Deferred().resolve().promise()
 
+      # if hidden path is path to file, use it as default content for root index,
+      # and then look for content in a folder of the same name
+      if isPathToFile hiddenPath
+        defaultRootContent = hiddenPath
+        hiddenPath = hiddenPath.substr( 0, hiddenPath.lastIndexOf '.') + '/'
+
       # Ensure the hidden path ends in '/'
       hiddenPath = "#{hiddenPath}/" unless hiddenPath.charAt( hiddenPath.length - 1 )
 
@@ -614,7 +627,9 @@ and the paths to your javascript libraries as appropriate:
             evt.data.handler.apply( @$el, args )
             false
 
-      # Immediately update view
+      # Update view once root content is loaded
+      if defaultRootContent? then @cache[ '/' ] = default: '/../' + defaultRootContent
+
       update()
 
       # return this
@@ -726,50 +741,6 @@ and the paths to your javascript libraries as appropriate:
           path
       else
         path
-
-
-    # Determine whether there is default content for this path to an index.
-    # hasDefaultContent = ( path ) =>
-
-    #     # redirect to default content if it exists
-    #     splitPath = path.split '/'
-    #     container = splitPath[ 0...splitPath.length - 2 ].join( '/' ) + '/'
-    #     if @cache[ container ].default?
-    #       document.location.hash = @cache[ container ].default
-
-
-    # Find the path to content that should be displayed when updating for an index path.
-    # This is content that lives in cache with the same name as path, but has an
-    # extension.
-    #
-    # @param path the {String} path to an index to check for default content
-    #
-    # @return {String} the path to default content if it exists, {Null} if it doesn't
-  #
-#
-#
-    # findDefaultContentPath = ( path ) =>
-    #   if @logging then log "findDefaultContentPath ( #{path} )"
-    #   if path is '/'
-    #     return if @rootContentPath? then @rootContentPath else null
-    #   else
-    #     # Look inside container folder
-    #     splitPath = path.split( '/' )
-    #     container = splitPath[ 0...splitPath.length - 2 ].join( '/' ) + '/'
-    #     log 'container: ' + container
-
-    #     $links = @cache[ container ].links
-    #     folderName = splitPath[ splitPath.length - 2]
-
-    #     for linkElem in $links
-    #       href = $( linkElem ).attr( 'href' ).substr 1
-    #       fileName = href.substr href.lastIndexOf( '/' ) + 1
-    #       if fileName.substr( 0, folderName.length ) is folderName
-    #         log "found default path: #{container + fileName}"
-    #         return container + fileName
-
-    #   # Return null if couldn't find anything matching in the container
-    #   null
 
     # Update browser to display the view associated with the current fragment.
     # Will load, then change fragment (which will call {#update()} again) if
@@ -1114,7 +1085,7 @@ and the paths to your javascript libraries as appropriate:
     destroy     : [ hideLoadingNotice, hideError ]
 
     # Whether to log function calls
-    logging : true
+    logging : false
 
     # How many milliseconds to wait between the start of loading and
     # when loading is resolved.
