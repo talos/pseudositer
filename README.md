@@ -4,7 +4,7 @@
 
 - - -
 
-[website](http://invisiblearchitecture.net/pseudositer/)
+[website](http://www.pseudositer.com/)
 
 - - -
 
