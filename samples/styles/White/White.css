@@ -1,0 +1,223 @@
+/* 
+Template Name: White
+Template URL: http://www.invisiblearchitecture.net/pseudositer/#/Templates.md
+Description: a portfolio theme built for pseudositer 
+			NOTE: This theme goes 3 levels deep (index2) if you need to go deeper you will have to personally style and position each of the indexes.
+Version: 
+Author: Sonali Sridhar
+Author URL: https://github.com/jollysonali
+Tags: clean, basic, minimal, whitespace
+
+*/
+@font-face {
+    font-family: 'MuseoSlab500';
+    src: url('Museo_Slab_500-webfont.eot');
+    src: url('Museo_Slab_500-webfont.eot?iefix') format('eot'),
+         url('Museo_Slab_500-webfont.woff') format('woff'),
+         url('Museo_Slab_500-webfont.ttf') format('truetype'),
+         url('Museo_Slab_500-webfont.svg#webfontyumMOUTD') format('svg');
+    font-weight: normal;
+    font-style: normal;
+
+}
+
+body {
+	font-family: 'MuseoSlab500', Helvetica, sans-serif;
+	font-size:0.875em;
+	line-height: 150%;
+	color: black;
+	margin: 0;
+}
+
+a {
+	text-decoration: underline;
+	color: #C43939;
+	
+}
+
+a:hover {
+	color: #C43939;
+}
+
+
+code {
+	color: #333;
+/*	font-family: courier, "courier new", monospace;*/
+	border: 1px solid #999;
+	padding: 3px;
+	background-color: white;
+	display: inline-block;
+	padding: .2em;
+}
+
+h1 {
+	text-transform:uppercase;
+	font-size:2.5em;
+}
+
+h1 a {
+	text-transform:uppercase;
+}
+
+h2 {
+	font-size:1.875em;
+}
+
+h3 {
+}
+
+ul {
+	list-style-type: square;
+}
+
+hr {
+	border: 0px;
+	height: 1px;
+	color: black;
+	background-color: black;
+	border: none;
+	width: 50%;
+}
+
+div#pseudositer {
+/*	padding: 0em 1.4em 0 1.4em;*/
+}
+
+div#header {
+	font-size: 4em;
+	font-style: italic;
+	font-family: 'MuseoSlab500', Helvetica, sans-serif;
+	background: white;
+}
+
+div#header a {
+	color: black;
+}
+
+div#header strong {
+	font-weight: bold;
+}
+
+.pseudositer-index {
+}
+
+.pseudositer-index .pseudositer-link {
+	float: left;
+}
+
+.pseudositer-index-0 {	
+	position: fixed;
+	width: 6em;
+	left: 0px;
+	bottom: 0em;
+	padding: 1em;
+	font-size: .9em;
+	
+	top: 3em;
+	border: #ccc dashed;
+	border-width: 1px 0px 0px 0px;
+}
+
+.pseudositer-index-0 .pseudositer-link {
+	font-size: 1em;
+	padding: 1em;
+	text-decoration: none;
+	text-transform: uppercase;
+	color: black;
+}
+
+.pseudositer-index-0 .pseudositer-link:hover {
+	color: #ccc;
+}
+
+.pseudositer-index-0 .pseudositer-link-selected {
+	font-weight: bold;
+	color: black;
+}
+
+.pseudositer-index-1 {
+	position: absolute;
+	display: inline-block;
+	top: 0em;
+	margin-right: 2em;
+	left: 10em;
+	top: 3em;
+}
+
+.pseudositer-index-1 .pseudositer-link {
+	font-size: 1em;
+	letter-spacing: .05em;
+	text-decoration: none;
+	text-transform: lowercase;
+	color: black;
+}
+
+.pseudositer-index-1 .pseudositer-link:hover {
+	color: #ccc;
+}
+
+.pseudositer-index-1 .pseudositer-link-selected {
+	font-weight: bold;
+	color: black;
+}
+
+
+.pseudositer-index-2 {
+	position: absolute;
+	margin-right: 2em;
+	top: 7em;
+	left: 10em;
+	color: black;
+}
+
+.pseudositer-link {	
+	font-size: 0.875em;
+	letter-spacing: .05em;
+	margin-right: 2em;
+	text-transform: lowercase;
+}
+
+.pseudositer-index-2 .pseudositer-link:hover {
+	color: #ccc;
+}
+
+.pseudositer-index-2 .pseudositer-link-selected {
+	font-weight: bold;
+	color: black;
+}
+
+.pseudositer-content {
+	position: absolute;
+	margin-right: 2em;
+	left: 10em;
+	top: 10em;
+	width: 500px;
+	display: inline-block;
+}
+
+.pseudositer-loading {
+	position: fixed;
+	left: 40%;
+	width: 20%;
+	top: 40%;
+	color: #222;
+	background-color: white;
+	opacity: 50%;
+	vertical-align: middle;
+	text-align: center;
+	border: 1px solid black;
+	padding: 1em;
+}
+
+.pseudositer-error {
+	position: fixed;
+	left: 40%;
+	width: 20%;
+	top: 40%;
+	background-color: #C43939;
+	color: #EFE;
+	vertical-align: middle;
+	text-align: center;
+	border: 1px solid black;
+	padding: 1em;
+}
